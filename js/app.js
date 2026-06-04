@@ -108,7 +108,7 @@ function renderPrograms(){
   const s=total?start+1:0,e=Math.min(start+PS.size,total);
   setText("p-count",nf.format(total)); setText("p-range",nf.format(s)+"–"+nf.format(e)); setText("p-page",PS.page+" / "+pages);
   setText("sb-n",nf.format(total));
-  renderHead("ph",PCOLS,PS); renderStats(filtered);
+  renderHead("ph",PCOLS,PS); renderStats(filtered); syncURL();
 }
 
 const OCOLS=[{k:"n",t:"Programme",c:"c-name"},{k:"s",t:"Stream",c:"c-tag"},{k:"sn",t:"Sector",c:"c-tag"},
@@ -129,7 +129,7 @@ function renderOutcomes(){
   }).join("")||"<tr><td colspan='9' class='empty'>No outcomes match these filters.</td></tr>";
   const s=total?start+1:0,e=Math.min(start+OS.size,total);
   setText("o-count",nf.format(total)); setText("o-range",nf.format(s)+"–"+nf.format(e)); setText("o-page",OS.page+" / "+pages);
-  renderHead("oh",OCOLS,OS);
+  renderHead("oh",OCOLS,OS); syncURL();
 }
 
 function groupStats(fn){ const r=PROGRAMS.filter(fn); return {n:r.length,mb:median(r.map(x=>x._usd)),md:median(r.map(x=>x._dur)),
@@ -271,7 +271,7 @@ function renderPlanCalc(){
   if(dur!=null&&d.n>=8&&dur<d.p25) f.push("Duration is shorter than most comparable programmes ("+Math.round(d.p25)+"–"+Math.round(d.p75)+" mo).");
   if(cpp!=null) f.push("Cost per person is your own figure (budget ÷ target). Comparable programmes rarely report reach, so there is no external benchmark — sense-check against sector unit-cost studies.");
   if(f.length) h+="<ul class='pflags'>"+f.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>";
-  el.innerHTML=h;
+  el.innerHTML=h; syncURL();
 }
 function exportPlan(){ const {rows,scope}=planCohort(); const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur");
   const L=[["field","value"].join(",")]; const add=(k,v)=>L.push([cc(k),cc(v)].join(","));
@@ -350,12 +350,155 @@ function openCard(p){ if(!p) return;
 
 function setText(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
 function showView(name){
+  CURRENT_VIEW=name;
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("show",v.id==="view-"+name));
   document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===name));
+  if(name==="charts") renderCharts();
+  syncURL();
 }
 function setTheme(t){ document.documentElement.setAttribute("data-theme",t);
   document.querySelectorAll(".theme-btn").forEach(b=>b.classList.toggle("on",b.dataset.theme===t)); }
-function setBasis(x){ BASIS=x; document.querySelectorAll(".basis-btn").forEach(b=>b.classList.toggle("on",b.dataset.basis===x)); recomputeUSD(); renderPrograms(); renderBenchmarks(); if(typeof renderPlanRec==="function"){renderPlanRec();renderPlanCalc();} }
+function setBasis(x){ BASIS=x; document.querySelectorAll(".basis-btn").forEach(b=>b.classList.toggle("on",b.dataset.basis===x)); recomputeUSD(); renderPrograms(); renderBenchmarks(); renderCharts(); renderCountry(); if(typeof renderPlanRec==="function"){renderPlanRec();renderPlanCalc();} }
+
+/* ---------- shareable URL state ---------- */
+let CURRENT_VIEW="programmes", URL_READY=false;
+function reflectControls(){
+  const set=(id,v)=>{const el=document.getElementById(id); if(el) el.value=v;};
+  set("q",PS.q); set("sq",PS.q); set("f-donor",PS.d); set("f-region",PS.rg); set("f-country",PS.co);
+  set("f-sector",PS.sc); set("f-status",PS.sta); set("f-res",PS.re); set("f-provider",PS.prov);
+  set("pgsize",PS.size>=1e9?"all":String(PS.size));
+  set("oq",OS.q); set("o-stream",OS.s); set("o-sector",OS.sn); set("o-type",OS.t);
+  set("opgsize",OS.size>=1e9?"all":String(OS.size));
+  if(CY.country) set("cy-pick",CY.country);
+}
+function syncURL(){
+  if(!URL_READY) return;
+  const qp=new URLSearchParams();
+  if(CURRENT_VIEW&&CURRENT_VIEW!=="programmes") qp.set("view",CURRENT_VIEW);
+  if(BASIS==="real") qp.set("usd","real");
+  if(CURRENT_VIEW==="programmes"){
+    if(PS.q)qp.set("q",PS.q); if(PS.d)qp.set("donor",PS.d); if(PS.rg)qp.set("region",PS.rg); if(PS.co)qp.set("country",PS.co);
+    if(PS.sc)qp.set("sector",PS.sc); if(PS.sta)qp.set("status",PS.sta); if(PS.re)qp.set("results",PS.re); if(PS.prov)qp.set("provider",PS.prov);
+    if(PS.sort!=="_usd")qp.set("sort",PS.sort); if(PS.dir!==-1)qp.set("dir",PS.dir);
+    if(PS.page>1)qp.set("page",PS.page); if(PS.size!==50)qp.set("size",PS.size>=1e9?"all":PS.size);
+  } else if(CURRENT_VIEW==="outcomes"){
+    if(OS.q)qp.set("q",OS.q); if(OS.s)qp.set("stream",OS.s); if(OS.sn)qp.set("sector",OS.sn); if(OS.t)qp.set("type",OS.t);
+    if(OS.sort!=="_ach")qp.set("sort",OS.sort); if(OS.dir!==-1)qp.set("dir",OS.dir);
+    if(OS.page>1)qp.set("page",OS.page); if(OS.size!==50)qp.set("size",OS.size>=1e9?"all":OS.size);
+  } else if(CURRENT_VIEW==="countries"){
+    if(CY.country)qp.set("country",CY.country);
+  } else if(CURRENT_VIEW==="plan"){
+    if(PL.country)qp.set("country",PL.country); if(PL.sector)qp.set("sector",PL.sector); if(PL.donor)qp.set("donor",PL.donor);
+    if(PL.budget!=null)qp.set("budget",PL.budget); if(PL.dur!=null)qp.set("duration",PL.dur); if(PL.target!=null)qp.set("target",PL.target);
+  }
+  const qs=qp.toString();
+  try{ history.replaceState(null,"",location.pathname+(qs?"?"+qs:"")); }catch(e){}
+}
+function route(){
+  const qp=new URLSearchParams(location.search);
+  if(qp.get("usd")==="real") setBasis("real");
+  const view=qp.get("view");
+  const plannerIntent = view==="plan"||qp.has("target")||qp.has("budget")||qp.has("duration")||qp.has("people");
+  if(plannerIntent){ initPlanFromURL(); return; }
+  if(view==="outcomes"){
+    OS.q=qp.get("q")||""; OS.s=qp.get("stream")||""; OS.sn=qp.get("sector")||""; OS.t=qp.get("type")||"";
+    if(qp.get("sort"))OS.sort=qp.get("sort"); if(qp.get("dir"))OS.dir=+qp.get("dir");
+    if(qp.get("page"))OS.page=+qp.get("page"); const z=qp.get("size"); if(z)OS.size=(z==="all"?1e9:+z);
+  } else if(view==="countries"){
+    CY.country=qp.get("country")||"";
+  } else if(!view||view==="programmes"){
+    PS.q=qp.get("q")||""; PS.d=qp.get("donor")||""; PS.rg=qp.get("region")||""; PS.co=qp.get("country")||"";
+    PS.sc=qp.get("sector")||""; PS.sta=qp.get("status")||""; PS.re=qp.get("results")||""; PS.prov=qp.get("provider")||"";
+    if(qp.get("sort"))PS.sort=qp.get("sort"); if(qp.get("dir"))PS.dir=+qp.get("dir");
+    if(qp.get("page"))PS.page=+qp.get("page"); const z=qp.get("size"); if(z)PS.size=(z==="all"?1e9:+z);
+  }
+  reflectControls();
+  renderPrograms(); renderOutcomes(); renderCountry();
+  showView(view||"programmes");
+}
+
+/* ---------- Charts (zero-dependency SVG) ---------- */
+function svgBars(data,o){ o=o||{}; const W=o.w||540,H=o.h||230,pL=44,pR=10,pT=10,pB=o.rot?52:30;
+  const max=Math.max(1,...data.map(d=>d.v)),iw=W-pL-pR,ih=H-pT-pB,bw=iw/(data.length||1); let g="",b="",x="";
+  for(let i=0;i<=4;i++){const y=pT+ih*(1-i/4); g+="<line class='cg' x1='"+pL+"' y1='"+y.toFixed(1)+"' x2='"+(W-pR)+"' y2='"+y.toFixed(1)+"'/><text class='ct' x='"+(pL-5)+"' y='"+(y+3).toFixed(1)+"' text-anchor='end'>"+fmtNum(Math.round(max*i/4))+"</text>";}
+  data.forEach((d,i)=>{const h=ih*(d.v/max),bx=pL+bw*i+bw*0.16,w=bw*0.68,by=pT+ih-h,cx=bx+w/2;
+    b+="<rect class='cbar' x='"+bx.toFixed(1)+"' y='"+by.toFixed(1)+"' width='"+w.toFixed(1)+"' height='"+Math.max(0,h).toFixed(1)+"' rx='2'><title>"+esc(d.l)+": "+fmtNum(d.v)+(d.s?" · "+esc(d.s):"")+"</title></rect>";
+    x+= o.rot ? "<text class='cx' x='"+cx.toFixed(1)+"' y='"+(H-pB+12)+"' text-anchor='end' transform='rotate(-40 "+cx.toFixed(1)+" "+(H-pB+12)+")'>"+esc(d.l)+"</text>"
+              : "<text class='cx' x='"+cx.toFixed(1)+"' y='"+(H-pB+14)+"' text-anchor='middle'>"+esc(d.l)+"</text>";
+  });
+  return "<svg viewBox='0 0 "+W+" "+H+"' class='chart' preserveAspectRatio='xMidYMid meet'>"+g+b+x+"</svg>";
+}
+function svgHBars(data,o){ o=o||{}; const W=o.w||540,rowH=27,pL=132,pR=58,pT=6,H=pT*2+rowH*(data.length||1);
+  const max=Math.max(1,...data.map(d=>d.v)); let s="";
+  data.forEach((d,i)=>{const y=pT+rowH*i,bw=(W-pL-pR)*(d.v/max);
+    s+="<text class='chl' x='"+(pL-8)+"' y='"+(y+rowH/2+3).toFixed(1)+"' text-anchor='end'>"+esc(d.l)+"</text>";
+    s+="<rect class='cbar' x='"+pL+"' y='"+(y+5).toFixed(1)+"' width='"+Math.max(1,bw).toFixed(1)+"' height='"+(rowH-12)+"' rx='2'><title>"+esc(d.l)+": "+fmtNum(d.v)+(d.s?" · "+esc(d.s):"")+"</title></rect>";
+    s+="<text class='cval' x='"+(pL+bw+5).toFixed(1)+"' y='"+(y+rowH/2+3).toFixed(1)+"'>"+esc(d.disp||fmtNum(d.v))+"</text>";
+  });
+  return "<svg viewBox='0 0 "+W+" "+H+"' class='chart' preserveAspectRatio='xMidYMid meet'>"+s+"</svg>";
+}
+function svgScatter(pts,o){ o=o||{}; const W=o.w||540,H=o.h||250,pL=46,pR=12,pT=10,pB=34,iw=W-pL-pR,ih=H-pT-pB;
+  const xs=pts.map(p=>p.x).filter(v=>v>0); if(!xs.length) return "<svg viewBox='0 0 "+W+" "+H+"' class='chart'></svg>";
+  const xmin=Math.log10(Math.min(...xs)),xmax=Math.log10(Math.max(...xs)),ymax=Math.max(1,...pts.map(p=>p.y)),span=(xmax-xmin)||1; let g="",c="";
+  for(let e=Math.ceil(xmin);e<=Math.floor(xmax);e++){const px=pL+iw*((e-xmin)/span); g+="<line class='cg' x1='"+px.toFixed(1)+"' y1='"+pT+"' x2='"+px.toFixed(1)+"' y2='"+(pT+ih)+"'/><text class='cx' x='"+px.toFixed(1)+"' y='"+(H-pB+14)+"' text-anchor='middle'>"+fmtCompact(Math.pow(10,e))+"</text>";}
+  for(let i=0;i<=4;i++){const y=pT+ih*(1-i/4); g+="<line class='cg' x1='"+pL+"' y1='"+y.toFixed(1)+"' x2='"+(W-pR)+"' y2='"+y.toFixed(1)+"'/><text class='ct' x='"+(pL-5)+"' y='"+(y+3).toFixed(1)+"' text-anchor='end'>"+Math.round(ymax*i/4)+"</text>";}
+  pts.forEach(p=>{ if(!(p.x>0))return; const px=pL+iw*((Math.log10(p.x)-xmin)/span),py=pT+ih*(1-Math.min(1,p.y/ymax)); c+="<circle class='cpt' cx='"+px.toFixed(1)+"' cy='"+py.toFixed(1)+"' r='2.4'><title>"+esc(p.t||"")+"</title></circle>"; });
+  return "<svg viewBox='0 0 "+W+" "+H+"' class='chart' preserveAspectRatio='xMidYMid meet'>"+g+c+"</svg>";
+}
+function chartCard(t,s,svg){ return "<div class='chartcard'><h3>"+esc(t)+"</h3><p class='csub'>"+esc(s)+"</p>"+svg+"</div>"; }
+function renderCharts(){
+  const el=document.getElementById("charts"); if(!el) return;
+  const usdLab=BASIS==="real"?"real 2024 USD":"nominal USD";
+  const edges=[1e4,1e5,1e6,1e7,1e8,1e9],blab=["<10k","10k–100k","100k–1M","1M–10M","10M–100M","100M–1B",">1B"],bc=new Array(7).fill(0);
+  PROGRAMS.forEach(p=>{ if(p._usd==null)return; let bi=0; while(bi<edges.length&&p._usd>=edges[bi])bi++; bc[bi]++; });
+  const c1=svgBars(blab.map((l,i)=>({l,v:bc[i]})),{});
+  const yc={}; PROGRAMS.forEach(p=>{ if(p.year&&p.year>=2012) yc[p.year]=(yc[p.year]||0)+1; });
+  const years=Object.keys(yc).map(Number).sort((a,b)=>a-b);
+  const c2=svgBars(years.map(y=>({l:String(y),v:yc[y]})),{rot:years.length>10});
+  const pts=PROGRAMS.filter(p=>p._usd!=null&&p._dur!=null&&p._dur>0).map(p=>({x:p._usd,y:p._dur,t:p.n+" · "+fmtCompact(p._usd)+" · "+p._dur+"mo"}));
+  const c3=svgScatter(pts,{});
+  const rc=REGIONS.map(rg=>{const r=PROGRAMS.filter(p=>p.rg===rg);return {l:rg,v:r.length,s:"med "+fmtCompact(median(r.map(x=>x._usd))),disp:fmtNum(r.length)};}).filter(d=>d.v).sort((a,b)=>b.v-a.v);
+  const c4=svgHBars(rc,{});
+  el.innerHTML=
+    chartCard("Budget distribution","Programmes by ≈USD band ("+usdLab+") — "+fmtNum(PROGRAMS.filter(p=>p._usd!=null).length)+" priced",c1)+
+    chartCard("Programmes by start year","Count by reported start year",c2)+
+    chartCard("Budget vs duration","Each point a programme — log budget ("+usdLab+") × months",c3)+
+    chartCard("By region","Programme count; median budget on hover",c4);
+}
+
+/* ---------- Country profiles ---------- */
+const CY={country:""};
+function cyTop(rows,key,n){ const m={}; rows.forEach(r=>{const k=r[key]; if(k) m[k]=(m[k]||0)+1;}); return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,n); }
+function cyBars(items){ const max=Math.max(1,...items.map(d=>d.v)); return items.map(d=>"<div class='cp-bar-row'><span class='cp-bl'>"+esc(d.l)+"</span><span class='cp-bar'><span style='width:"+Math.round(100*d.v/max)+"%'></span></span><span class='cp-bv'>"+esc(d.disp||String(d.v))+"</span></div>").join("")||"<p class='muted'>—</p>"; }
+function renderCountry(){
+  const el=document.getElementById("country"); if(!el) return;
+  if(!CY.country){ el.innerHTML="<div class='cprompt'>Select a country above to see its profile.</div>"; syncURL(); return; }
+  const rows=PROGRAMS.filter(p=>p.co===CY.country);
+  if(!rows.length){ el.innerHTML="<div class='cprompt'>No programmes for "+esc(CY.country)+".</div>"; syncURL(); return; }
+  const rg=rows[0].rg,medB=median(rows.map(r=>r._usd)),medD=median(rows.map(r=>r._dur)),resPct=rows.filter(r=>r.re).length/rows.length;
+  const secMap={}; rows.forEach(r=>{(secMap[r.sn]=secMap[r.sn]||[]).push(r);});
+  const secs=Object.entries(secMap).map(([k,v])=>({l:k,v:v.length,disp:v.length+" · "+fmtCompact(median(v.map(x=>x._usd)))})).sort((a,b)=>b.v-a.v);
+  const donors=cyTop(rows,"d",6).map(([l,v])=>({l,v,disp:String(v)}));
+  const provs=cyTop(rows.filter(r=>r.pcc),"pn",5).map(([l,v])=>({l,v,disp:String(v)}));
+  const recent=rows.slice().sort((a,b)=>(b.st||"").localeCompare(a.st||"")).slice(0,8);
+  let h="<div class='cprofile'>";
+  h+="<div class='cp-head'><div class='cp-region'>"+esc(rg||"")+"</div><div class='cp-actions'><button id='cy-grid' class='btn ghost'>View "+fmtNum(rows.length)+" in Programmes →</button><button id='cy-plan' class='btn'>Plan in "+esc(CY.country)+" →</button></div></div>";
+  h+="<div class='cp-stats'>"+
+    "<div class='cp-card'><div class='cp-k'>Programmes</div><div class='cp-v'>"+fmtNum(rows.length)+"</div></div>"+
+    "<div class='cp-card'><div class='cp-k'>Median budget</div><div class='cp-v'>"+fmtCompact(medB)+"</div></div>"+
+    "<div class='cp-card'><div class='cp-k'>Median duration</div><div class='cp-v'>"+(medD==null?"—":Math.round(medD)+" mo")+"</div></div>"+
+    "<div class='cp-card'><div class='cp-k'>Report results</div><div class='cp-v'>"+fmtPct(resPct)+"</div></div></div>";
+  h+="<div class='cp-grid2'>"+
+    "<div class='cp-panel'><h3>By sector</h3>"+cyBars(secs)+"</div>"+
+    "<div class='cp-panel'><h3>By donor type</h3>"+cyBars(donors)+(provs.length?"<h3 class='cp-h2'>Top providing countries</h3>"+cyBars(provs):"")+"</div></div>";
+  h+="<div class='cp-panel'><h3>Recent programmes</h3>"+recent.map(p=>"<div class='cp-prog crow-click' data-i='"+p._i+"'><span class='pcn'>"+esc(p.n)+"</span><span class='pcm'>"+esc(p.sn)+" · "+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+esc(p.st||"—")+" · <span class='rowmore'>open ›</span></span></div>").join("")+"</div>";
+  h+="</div>";
+  el.innerHTML=h;
+  const g=document.getElementById("cy-grid"); if(g) g.addEventListener("click",()=>{ Object.assign(PS,{q:"",d:"",rg:"",co:CY.country,sc:"",sta:"",re:"",prov:"",page:1}); reflectControls(); showView("programmes"); renderPrograms(); });
+  const pl=document.getElementById("cy-plan"); if(pl) pl.addEventListener("click",()=>{ PL.country=CY.country; setVal("pl-country",PL.country); showView("plan"); renderPlanRec(); renderPlanCalc(); });
+  el.querySelectorAll(".cp-prog[data-i]").forEach(r=>r.addEventListener("click",()=>openCard(PROGRAMS[+r.getAttribute("data-i")])));
+  syncURL();
+}
 
 function init(){
   fillSelect("f-donor",DONORS.filter(d=>PROGRAMS.some(p=>p.d===d)),"All donor types");
@@ -367,6 +510,7 @@ function init(){
   fillSelect("o-stream",uniq(OUTCOMES,"s"),"All streams");
   fillSelect("o-sector",uniq(OUTCOMES,"sn"),"All sectors");
   fillSelect("o-type",uniq(OUTCOMES,"t"),"All types");
+  fillSelect("cy-pick",uniq(PROGRAMS,"co"),"Select a country");
   setText("badge-prog",nf.format(PROGRAMS.length));
   setText("badge-out",nf.format(OUTCOMES.length));
 
@@ -395,6 +539,7 @@ function init(){
   on("o-prev","click",()=>{if(OS.page>1){OS.page--;renderOutcomes();}});
   on("o-next","click",()=>{OS.page++;renderOutcomes();});
   on("o-export","click",exportOutcomes);
+  on("cy-pick","change",e=>{CY.country=e.target.value;renderCountry();});
 
   const phEl=document.getElementById("ph"); if(phEl) phEl.addEventListener("click",e=>{const th=e.target.closest("th");if(!th||th.classList.contains("nosort"))return;const k=th.dataset.key;if(!k)return;if(PS.sort===k)PS.dir*=-1;else{PS.sort=k;PS.dir=PSTR.split(" ").includes(k)?1:-1;}renderPrograms();});
   const ohEl=document.getElementById("oh"); if(ohEl) ohEl.addEventListener("click",e=>{const th=e.target.closest("th");if(!th)return;const k=th.dataset.key;if(!k)return;if(OS.sort===k)OS.dir*=-1;else{OS.sort=k;OS.dir=("n i s sn t".split(" ").includes(k))?1:-1;}renderOutcomes();});
@@ -407,7 +552,8 @@ function init(){
   const _pb=document.getElementById("pb"); if(_pb) _pb.addEventListener("click",e=>{ const tr=e.target.closest&&e.target.closest("tr.crow-click"); if(tr) openCard(PROGRAMS[+tr.getAttribute("data-i")]); });
   const _rec=document.getElementById("pl-rec"); if(_rec) _rec.addEventListener("click",e=>{ const row=e.target.closest&&e.target.closest(".pcomp-row[data-i]"); if(row) openCard(PROGRAMS[+row.getAttribute("data-i")]); });
 
-  setTheme("light"); buildFX(); renderBenchmarks(); renderPrograms(); renderOutcomes(); wirePlan(); initPlanFromURL();
+  setTheme("light"); buildFX(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
+  route(); URL_READY=true; syncURL();
 }
 document.addEventListener("DOMContentLoaded",init);
 

@@ -13,6 +13,8 @@
  <nav>
   <button class="nav-item active" data-view="programmes"><svg class="ico" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6.2h12M6.5 6.2V13"/></svg><span>Programmes</span><b class="badge" id="badge-prog">0</b></button>
   <button class="nav-item" data-view="benchmarks"><svg class="ico" viewBox="0 0 16 16"><path d="M2 13.5h12"/><path d="M4 13V8M8 13V4M12 13V10"/></svg><span>Benchmarks</span></button>
+  <button class="nav-item" data-view="charts"><svg class="ico" viewBox="0 0 16 16"><path d="M2 2v12h12"/><path d="M4.5 11.5l3-3 2 2 3.5-4"/></svg><span>Charts</span></button>
+  <button class="nav-item" data-view="countries"><svg class="ico" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12"/></svg><span>Countries</span></button>
   <button class="nav-item" data-view="plan"><svg class="ico" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.4"/><circle cx="8" cy="8" r="1.5"/><path d="M8 .9v2.2M8 12.9v2.2M.9 8h2.2M12.9 8h2.2"/></svg><span>Plan a programme</span></button>
   <button class="nav-item" data-view="outcomes"><svg class="ico" viewBox="0 0 16 16"><path d="M5.5 4h8.5M5.5 8h8.5M5.5 12h8.5M2.3 4h.01M2.3 8h.01M2.3 12h.01"/></svg><span>Reported outcomes</span><b class="badge" id="badge-out">0</b></button>
   <button class="nav-item" data-view="readme"><svg class="ico" viewBox="0 0 16 16"><path d="M6.2 2.5 4.4 13.5M11.6 2.5 9.8 13.5M3.2 6h10M2.6 10h10"/></svg><span>#read_me</span></button>
@@ -59,6 +61,17 @@
  <section id="view-benchmarks" class="view">
   <header class="topbar"><div class="tb-title"><h1>Benchmarks</h1><p>Median budget, duration and reporting rate by sector, donor type and region — computed live over the representative embedded sample. Switch nominal ↔ real (2024) USD in the sidebar.</p></div></header>
   <div id="bench" class="bench"></div>
+ </section>
+
+ <section id="view-charts" class="view">
+  <header class="topbar"><div class="tb-title"><h1>Charts</h1><p>Shape of the embedded sample at a glance — distribution, time trend, scale-vs-duration and regional split. Budgets follow the nominal ↔ real (2024) USD toggle in the sidebar.</p></div></header>
+  <div id="charts" class="charts"></div>
+ </section>
+
+ <section id="view-countries" class="view">
+  <header class="topbar"><div class="tb-title"><h1>Country profiles</h1><p>Pick a country for a one-screen profile: how much is spent, on what, by whom — then jump to the filtered programmes or pre-fill the planner.</p></div></header>
+  <div class="controls"><select id="cy-pick"></select></div>
+  <div id="country" class="country"></div>
  </section>
 
  <section id="view-plan" class="view">

@@ -103,11 +103,31 @@ must come before `app.js` (it does, in `index.html`).
 - **Programmes** — searchable/filterable grid of every programme in the sample.
 - **Benchmarks** — median budget, duration and reporting rate by sector, donor
   type and region, computed live over the sample.
+- **Charts** — zero-dependency SVG views of the sample: budget distribution,
+  programmes by start year, budget-vs-duration scatter, and a regional split.
+- **Countries** — pick a country for a one-screen profile (spend, sectors,
+  donors, recent programmes) with jump-offs to the filtered grid or the planner.
 - **Plan a programme** — pick a need, get a benchmark from comparable programmes,
-  then adjust the plan to fit a budget. Deep-linkable via URL params, e.g.
-  `?country=KE&sector=12220&target=50000&budget=5000000`.
+  then adjust the plan to fit a budget.
 - **Reported outcomes** — indicator-level baseline → target → actual values.
 - **#read_me** — full method, provenance and caveats.
+
+### Shareable / deep-linkable URLs
+
+Every view's state lives in the query string (via `history.replaceState`), so
+any filtered view is bookmarkable and embeddable. Examples:
+
+| URL | Opens |
+|-----|-------|
+| `?donor=Bilateral&sector=Primary+education&sort=a&dir=1` | Programmes, filtered + sorted |
+| `?view=countries&country=Kenya` | Kenya country profile |
+| `?view=charts&usd=real` | Charts in constant-2024 USD |
+| `?view=outcomes&stream=WASH` | Outcomes, WASH stream |
+| `?country=KE&sector=12220&target=50000&budget=5000000` | Planner, pre-filled |
+
+Programme-grid params: `q, donor, region, country, sector, status, results,
+provider, sort, dir, page, size`. Add `usd=real` for inflation-adjusted figures.
+The planner link is the original deep-link and still works unchanged.
 
 ## Data provenance
 
