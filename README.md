@@ -79,14 +79,20 @@ dashboard tile can deep-link to a pre-filled view.
 Database/
 ├── index.html        # markup + view shells; loads the css/js below
 ├── css/
-│   └── styles.css     # all styling (light/dark themes via [data-theme])
+│   ├── styles.css     # all styling (light/dark themes via [data-theme])
+│   └── fonts.css      # @font-face for the self-hosted fonts
+├── fonts/            # Source Serif 4 + Public Sans woff2 subsets (self-hosted)
 ├── js/
 │   ├── data.js        # embedded dataset: PROGRAMS, OUTCOMES, RATES,
 │   │                  #   TOTALS, DEVREGION, DEFLATOR, META (globals)
 │   └── app.js         # all application logic (vanilla JS, no framework)
-├── serve.py          # tiny no-cache static dev server
+├── serve.pl          # zero-install Perl static dev server (Git for Windows)
+├── serve.py          # tiny no-cache static dev server (if you have Python)
 └── README.md
 ```
+
+Fonts are **self-hosted** (`fonts/` + `css/fonts.css`), so the app makes **no
+third-party requests** and works fully offline.
 
 `data.js` and `app.js` are plain (non-module) scripts, so the `const`/`let`
 declarations in `data.js` are visible to `app.js`. Load order matters: `data.js`
