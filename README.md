@@ -12,9 +12,13 @@ step. It ships with an embedded representative sample of **3,388 programmes** ac
 
 ## Run it
 
-Any static file server works. Two easy options:
+Any static file server works. Pick whichever runtime you have:
 
 ```sh
+# Perl (zero install — ships with Git for Windows)
+perl serve.pl              # serves http://localhost:8000
+perl serve.pl 9000         # custom port
+
 # Python (no dependencies)
 python serve.py            # serves http://localhost:8000 and opens your browser
 python serve.py 9000       # custom port
@@ -22,6 +26,9 @@ python serve.py 9000       # custom port
 # Node
 npx serve .
 ```
+
+If you use the Claude Code preview, `.claude/launch.json` defines these as
+`perl-static` (8000), `python-static` (8000) and `node-serve` (8001).
 
 Then open <http://localhost:8000/>. Opening `index.html` directly via `file://`
 also works in most browsers, but serving over HTTP avoids occasional font/CORS
