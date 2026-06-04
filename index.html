@@ -6,7 +6,8 @@
 </head>
 <body><div class="app">
 
-<aside class="sidebar">
+<div class="scrim" id="navScrim"></div>
+<aside class="sidebar" id="sidebar">
  <div class="brand"><div class="logo">B</div><div><div class="bname">Benchmark<em>DB</em></div><div class="bsub">IATI evidence base</div></div></div>
  <div class="side-search"><svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input id="sq" placeholder="Search programmes…"></div>
  <div class="nav-group">Views</div>
@@ -27,6 +28,7 @@
 </aside>
 
 <main class="main">
+ <button id="menu-toggle" class="menu-toggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false">☰ Menu</button>
 
  <section id="view-programmes" class="view show">
   <header class="topbar">

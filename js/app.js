@@ -53,7 +53,9 @@ function sortRows(rows,key,dir){ return rows.slice().sort((a,b)=>{
   if(typeof x==="string"||typeof y==="string"){ x=String(x).toLowerCase(); y=String(y).toLowerCase(); return x<y?-dir:x>y?dir:0; }
   return (x-y)*dir; }); }
 
+const REDUCE_MOTION=(typeof matchMedia!=="undefined")&&matchMedia("(prefers-reduced-motion: reduce)").matches;
 function countUp(el,to,fmt){ if(!el) return; const from=(typeof el._val==="number")?el._val:0; el._val=(to==null?0:to);
+  if(REDUCE_MOTION){ el.textContent=fmt(to); return; }
   if(to==null){ el.textContent=fmt(null); return; } const t0=performance.now(),d=460;
   function step(t){ const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3); el.textContent=fmt(from+(to-from)*e); if(k<1) requestAnimationFrame(step); else el.textContent=fmt(to); }
   requestAnimationFrame(step); }
@@ -81,7 +83,8 @@ const PSTR="n co rg d sn sta st en";
 function renderHead(trId,cols,state,strkeys){ const tr=document.getElementById(trId); if(!tr) return;
   tr.innerHTML=cols.map(c=>{ const nosort=(c.k==="src"); const isOn=(state.sort===c.k);
     const arr=isOn?("<span class='arr'>"+(state.dir<0?"↓":"↑")+"</span>"):"";
-    return "<th class='"+c.c+(nosort?" nosort":"")+"'"+(nosort?"":" data-key='"+c.k+"'")+(isOn?" data-on='1'":"")+">"+c.t+arr+"</th>"; }).join(""); }
+    const aria=isOn?(state.dir<0?"descending":"ascending"):"none";
+    return "<th class='"+c.c+(nosort?" nosort":"")+"'"+(nosort?"":" data-key='"+c.k+"' tabindex='0' aria-sort='"+aria+"'")+(isOn?" data-on='1'":"")+">"+c.t+arr+"</th>"; }).join(""); }
 
 function renderPrograms(){
   PCOLS[10].t="≈ USD"+(BASIS==="real"?" ’24":"");
@@ -543,12 +546,17 @@ function init(){
 
   const phEl=document.getElementById("ph"); if(phEl) phEl.addEventListener("click",e=>{const th=e.target.closest("th");if(!th||th.classList.contains("nosort"))return;const k=th.dataset.key;if(!k)return;if(PS.sort===k)PS.dir*=-1;else{PS.sort=k;PS.dir=PSTR.split(" ").includes(k)?1:-1;}renderPrograms();});
   const ohEl=document.getElementById("oh"); if(ohEl) ohEl.addEventListener("click",e=>{const th=e.target.closest("th");if(!th)return;const k=th.dataset.key;if(!k)return;if(OS.sort===k)OS.dir*=-1;else{OS.sort=k;OS.dir=("n i s sn t".split(" ").includes(k))?1:-1;}renderOutcomes();});
+  [phEl,ohEl].forEach(elx=>{ if(elx) elx.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ const th=e.target.closest&&e.target.closest("th[data-key]"); if(th){ e.preventDefault(); th.click(); } } }); });
 
-  document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>showView(b.dataset.view)));
+  const _mt=document.getElementById("menu-toggle"),_scrim=document.getElementById("navScrim");
+  const setNav=open=>{ document.body.classList.toggle("nav-open",open); if(_mt) _mt.setAttribute("aria-expanded",open?"true":"false"); };
+  if(_mt) _mt.addEventListener("click",()=>setNav(!document.body.classList.contains("nav-open")));
+  if(_scrim) _scrim.addEventListener("click",()=>setNav(false));
+  document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>{showView(b.dataset.view);setNav(false);}));
   document.querySelectorAll(".theme-btn").forEach(b=>b.addEventListener("click",()=>setTheme(b.dataset.theme)));
   document.querySelectorAll(".basis-btn").forEach(b=>b.addEventListener("click",()=>setBasis(b.dataset.basis)));
   const _m=document.getElementById("cardModal"); if(_m) _m.querySelectorAll("[data-close]").forEach(el=>el.addEventListener("click",closeCard));
-  document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeCard(); });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeCard(); setNav(false); } });
   const _pb=document.getElementById("pb"); if(_pb) _pb.addEventListener("click",e=>{ const tr=e.target.closest&&e.target.closest("tr.crow-click"); if(tr) openCard(PROGRAMS[+tr.getAttribute("data-i")]); });
   const _rec=document.getElementById("pl-rec"); if(_rec) _rec.addEventListener("click",e=>{ const row=e.target.closest&&e.target.closest(".pcomp-row[data-i]"); if(row) openCard(PROGRAMS[+row.getAttribute("data-i")]); });
 
