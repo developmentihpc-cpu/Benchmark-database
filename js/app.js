@@ -28,7 +28,7 @@ function fmtUSD(v){ return (v==null)?"—":"$"+nf.format(Math.round(v)); }
 function fmtCompact(v){ if(v==null) return "—"; const a=Math.abs(v); if(a>=1e9) return "$"+(v/1e9).toFixed(1)+"B"; if(a>=1e6) return "$"+(v/1e6).toFixed(1)+"M"; if(a>=1e3) return "$"+Math.round(v/1e3)+"k"; return "$"+Math.round(v); }
 function fmtNum(v){ return (v==null)?"—":nf.format(v); }
 function fmtPct(v){ return (v==null)?"—":Math.round(v*100)+"%"; }
-function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
 const PS={q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",sort:"_usd",dir:-1,page:1,size:50};
 const OS={q:"",s:"",sn:"",t:"",sort:"_ach",dir:-1,page:1,size:50};
@@ -60,12 +60,11 @@ function countUp(el,to,fmt){ if(!el) return; const from=(typeof el._val==="numbe
 
 function renderStats(rows){
   const n=rows.length, medB=median(rows.map(r=>r._usd)), medD=median(rows.map(r=>r._dur));
-  const wr=rows.filter(r=>r.re).length, wreach=rows.filter(r=>r.rc!=null&&r.rc!=="").length;
+  const wr=rows.filter(r=>r.re).length;
   countUp(document.getElementById("st-n"),n,v=>fmtNum(Math.round(v)));
   countUp(document.getElementById("st-budget"),medB,fmtCompact);
   countUp(document.getElementById("st-dur"),medD,v=>(v==null?"—":Math.round(v)));
   countUp(document.getElementById("st-res"),n?wr/n:null,fmtPct);
-  const r=document.getElementById("st-reach"); if(r) r.textContent=fmtNum(wreach);
 }
 
 function statusPill(s){ if(!s) return "<span class='dash'>–</span>"; const cls=STATUS_CLASS[s]||"st-clo"; return "<span class='stp "+cls+"'>"+esc(s)+"</span>"; }
@@ -84,8 +83,8 @@ function renderHead(trId,cols,state,strkeys){ const tr=document.getElementById(t
 
 function renderPrograms(){
   PCOLS[10].t="≈ USD"+(BASIS==="real"?" ’24":""); setText("st-budget-sub",BASIS==="real"?"≈ real 2024 USD (CPI)":"≈ nominal USD · FX");
-  let rows=filterPrograms(); const total=rows.length;
-  rows=sortRows(rows,PS.sort,PS.dir);
+  const filtered=filterPrograms(); const total=filtered.length;
+  let rows=sortRows(filtered,PS.sort,PS.dir);
   const pages=Math.max(1,Math.ceil(total/PS.size)); if(PS.page>pages) PS.page=pages;
   const start=(PS.page-1)*PS.size, slice=rows.slice(start,start+PS.size);
   document.getElementById("pb").innerHTML=slice.map(p=>{
@@ -107,7 +106,7 @@ function renderPrograms(){
   const s=total?start+1:0,e=Math.min(start+PS.size,total);
   setText("p-count",nf.format(total)); setText("p-range",nf.format(s)+"–"+nf.format(e)); setText("p-page",PS.page+" / "+pages);
   setText("sb-n",nf.format(total));
-  renderHead("ph",PCOLS,PS); renderStats(filterPrograms());
+  renderHead("ph",PCOLS,PS); renderStats(filtered);
 }
 
 const OCOLS=[{k:"n",t:"Programme",c:"c-name"},{k:"s",t:"Stream",c:"c-tag"},{k:"sn",t:"Sector",c:"c-tag"},
