@@ -27,6 +27,45 @@ Then open <http://localhost:8000/>. Opening `index.html` directly via `file://`
 also works in most browsers, but serving over HTTP avoids occasional font/CORS
 quirks and matches production.
 
+## Deploy to GitHub Pages
+
+No build step — Pages serves the repo as-is. Once the repo is on GitHub:
+
+1. Push this repo to GitHub (see the commands your setup notes / below).
+2. In the repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+3. The included [`.github/workflows/pages.yml`](.github/workflows/pages.yml) runs on
+   every push to `main` and publishes the site. The live URL appears in the
+   Actions run summary and under Settings → Pages, typically:
+   `https://<user>.github.io/<repo>/`.
+
+(Alternatively, set Pages **Source: Deploy from a branch → `main` / root** and skip
+the workflow — both serve the same static files.)
+
+## Embed in your dashboard
+
+This site stands alone; link or embed it from your existing dashboard.
+
+Plain link:
+
+```html
+<a href="https://<user>.github.io/<repo>/" target="_blank" rel="noopener">
+  Open Benchmark DB
+</a>
+```
+
+Inline iframe (deep-link straight into the planner with URL params):
+
+```html
+<iframe
+  src="https://<user>.github.io/<repo>/?country=KE&sector=12220&target=50000&budget=5000000"
+  title="Benchmark DB"
+  style="width:100%;height:90vh;border:0"
+  loading="lazy"></iframe>
+```
+
+The planner reads `country`, `sector`, `target` and `budget` query params, so each
+dashboard tile can deep-link to a pre-filled view.
+
 ## Project layout
 
 ```

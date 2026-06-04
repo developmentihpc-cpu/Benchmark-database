@@ -10,3 +10,6 @@ node_modules/
 Thumbs.db
 .vscode/
 .idea/
+
+# Claude Code local config
+.claude/
