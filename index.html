@@ -1,0 +1,142 @@
+<!doctype html><html lang="en" data-theme="light"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Benchmark DB — IATI evidence base</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Public+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body><div class="app">
+
+<aside class="sidebar">
+ <div class="brand"><div class="logo">B</div><div><div class="bname">Benchmark<em>DB</em></div><div class="bsub">IATI evidence base</div></div></div>
+ <div class="side-search"><svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input id="sq" placeholder="Search programmes…"></div>
+ <div class="nav-group">Views</div>
+ <nav>
+  <button class="nav-item active" data-view="programmes"><svg class="ico" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6.2h12M6.5 6.2V13"/></svg><span>Programmes</span><b class="badge" id="badge-prog">0</b></button>
+  <button class="nav-item" data-view="benchmarks"><svg class="ico" viewBox="0 0 16 16"><path d="M2 13.5h12"/><path d="M4 13V8M8 13V4M12 13V10"/></svg><span>Benchmarks</span></button>
+  <button class="nav-item" data-view="plan"><svg class="ico" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.4"/><circle cx="8" cy="8" r="1.5"/><path d="M8 .9v2.2M8 12.9v2.2M.9 8h2.2M12.9 8h2.2"/></svg><span>Plan a programme</span></button>
+  <button class="nav-item" data-view="outcomes"><svg class="ico" viewBox="0 0 16 16"><path d="M5.5 4h8.5M5.5 8h8.5M5.5 12h8.5M2.3 4h.01M2.3 8h.01M2.3 12h.01"/></svg><span>Reported outcomes</span><b class="badge" id="badge-out">0</b></button>
+  <button class="nav-item" data-view="readme"><svg class="ico" viewBox="0 0 16 16"><path d="M6.2 2.5 4.4 13.5M11.6 2.5 9.8 13.5M3.2 6h10M2.6 10h10"/></svg><span>#read_me</span></button>
+ </nav>
+ <div class="side-foot">
+  <div class="side-meta">3,388 programmes · 125 developing countries<br>started ≥ 2021-06-02 or ongoing · 2026-06-02</div>
+  <div class="theme-toggle"><button class="theme-btn on" data-theme="light">☀ Light</button><button class="theme-btn" data-theme="dark">☾ Dark</button></div>
+  <div class="theme-toggle basis-set" title="Real = inflation-adjusted to constant 2024 USD (US CPI)"><button class="basis-btn on" data-basis="nominal">$ Nominal</button><button class="basis-btn" data-basis="real">$ Real ’24</button></div>
+ </div>
+</aside>
+
+<main class="main">
+
+ <section id="view-programmes" class="view show">
+  <header class="topbar">
+   <div class="tb-title"><h1>Programmes</h1><p>Real comparable programmes across developing countries — started in the last 5 years or currently ongoing/planned. Filter any slice; the readout recomputes live.</p></div>
+   <div class="tb-actions"><button id="reset" class="btn ghost">Reset</button><button id="export" class="btn">⤓ Export CSV</button></div>
+  </header>
+  <div class="readout">
+   <div class="rcard"><div class="rk">Programmes</div><div class="rv" id="st-n">0</div><div class="rs">in current selection</div></div>
+   <div class="rcard"><div class="rk">Median budget</div><div class="rv" id="st-budget">—</div><div class="rs" id="st-budget-sub">≈ nominal USD · FX</div></div>
+   <div class="rcard"><div class="rk">Median duration</div><div class="rv" id="st-dur">—</div><div class="rs">months (reported dates)</div></div>
+   <div class="rcard"><div class="rk">Reporting results</div><div class="rv" id="st-res">—</div><div class="rs">share of selection</div></div>
+  </div>
+  <div class="controls">
+   <input id="q" class="search" placeholder="Search programme, org or country…">
+   <select id="f-donor"></select><select id="f-provider"></select><select id="f-region"></select><select id="f-country"></select><select id="f-sector"></select><select id="f-status"></select>
+   <select id="f-res"><option value="">Results: any</option><option value="Y">Reports results</option><option value="N">No results</option></select>
+  </div>
+  <div class="legend">
+   <span><i class="dot dot-rep"></i>reported (from IATI)</span>
+   <span><i class="dot dot-der"></i>derived (duration, ≈USD)</span>
+   <span>hover a <b>reach</b> value for its indicator label</span>
+   <span class="warn">cost/beneficiary &amp; aggregate achievement omitted — see #read_me</span>
+  </div>
+  <div class="gridwrap"><table class="grid"><thead><tr id="ph"></tr></thead><tbody id="pb"></tbody></table></div>
+  <div class="gridfoot">
+   <div class="gf-left">Showing <span id="p-range">0</span> of <b id="p-count">0</b> programmes <span class="muted">· selection <b id="sb-n">0</b></span></div>
+   <div class="pager"><span>rows</span><select id="pgsize"><option>25</option><option selected>50</option><option>100</option><option value="all">all</option></select>
+    <button id="p-prev">‹</button><span id="p-page">1 / 1</span><button id="p-next">›</button></div>
+  </div>
+ </section>
+
+ <section id="view-benchmarks" class="view">
+  <header class="topbar"><div class="tb-title"><h1>Benchmarks</h1><p>Median budget, duration and reporting rate by sector, donor type and region — computed live over the representative embedded sample. Switch nominal ↔ real (2024) USD in the sidebar.</p></div></header>
+  <div id="bench" class="bench"></div>
+ </section>
+
+ <section id="view-plan" class="view">
+  <header class="topbar"><div class="tb-title"><h1>Plan a programme</h1><p>Pick a need, get a benchmark from comparable real programmes, then adjust the plan to fit your budget.</p></div></header>
+  <div class="plan">
+   <div class="pcard">
+    <div class="pcard-h"><span class="pstep">1</span><h2>Define the need</h2></div>
+    <div class="pgrid">
+     <label>Country<select id="pl-country"></select></label>
+     <label>Intervention / sector<select id="pl-sector"></select></label>
+     <label>Donor type<select id="pl-donor"></select></label>
+     <label>People to reach<input id="pl-need" type="number" min="0" placeholder="from needs analysis"></label>
+    </div>
+    <p class="phint">Your country profile can deep-link straight into this planner via URL parameters &mdash; e.g. <code>?country=KE&amp;sector=12220&amp;target=50000&amp;budget=5000000</code> opens it pre-filled.</p>
+   </div>
+   <div class="pcard" id="pl-rec"></div>
+   <div class="pcard" id="pl-planwrap">
+    <div class="pcard-h"><span class="pstep">3</span><h2>Your programme plan</h2>
+     <div class="tb-actions"><button id="pl-reset" class="btn ghost">Reset to benchmark</button><button id="pl-export" class="btn">&#8595; Export plan</button></div></div>
+    <div class="pgrid">
+     <label>Budget (&asymp; USD)<input id="pl-budget" type="number" min="0"></label>
+     <label>Duration (months)<input id="pl-dur" type="number" min="0"></label>
+     <label>Target reach (people)<input id="pl-target" type="number" min="0"></label>
+     <label class="pcheck"><input id="pl-link" type="checkbox"> Scale reach with budget (hold cost/person)</label>
+    </div>
+    <div id="pl-calc"></div>
+   </div>
+  </div>
+ </section>
+
+ <section id="view-outcomes" class="view">
+  <header class="topbar"><div class="tb-title"><h1>Reported outcomes</h1><p>Real indicator-level baseline → target → actual values pulled from IATI.</p></div>
+   <div class="tb-actions"><button id="o-export" class="btn">⤓ Export CSV</button></div></header>
+  <div class="controls"><input id="oq" class="search" placeholder="Search programme or indicator…">
+   <select id="o-stream"></select><select id="o-sector"></select><select id="o-type"></select></div>
+  <div class="note"><b>Achieved = actual ÷ target</b> is shown per row (DERIVED) so you can judge each case — but it is <b>not aggregated into a benchmark</b>: many records copy target=actual (→100%) or leave actuals at 0 before reporting closes (→0%), so a median would measure data-entry behaviour. Scale: <span class="a5">≥100%</span> · <span class="a4">75</span> · <span class="a3">50</span> · <span class="a2">25</span> · <span class="a1">&lt;25%</span>.</div>
+  <div class="gridwrap"><table class="grid"><thead><tr id="oh"></tr></thead><tbody id="ob"></tbody></table></div>
+  <div class="gridfoot"><div class="gf-left">Showing <span id="o-range">0</span> of <b id="o-count">0</b> indicators</div>
+   <div class="pager"><span>rows</span><select id="opgsize"><option>25</option><option selected>50</option><option>100</option><option value="all">all</option></select>
+    <button id="o-prev">‹</button><span id="o-page">1 / 1</span><button id="o-next">›</button></div></div>
+ </section>
+
+ <section id="view-readme" class="view method">
+  <header class="topbar"><div class="tb-title"><h1>#read_me</h1><p>Method, provenance and caveats. Source: IATI Standard via the Code for IATI datastore · developing countries · pulled 2026-06-02.</p></div></header>
+  <div class="mcols">
+   <h2>What this is</h2>
+   <p>A reference set of real comparable programmes and live benchmarks to inform programme <b>design</b> — realistic scope, budget, duration and targets. It is a design reference, not an M&amp;E tracking system.</p>
+   <h2>Scope</h2>
+   <p>All <b>developing countries</b> — World Bank non&ndash;high-income economies (high-income and aggregates excluded); 125 countries appear here. A programme is kept if it <b>started on or after 2021-06-02</b> (the last 5 years) <b>or</b> is <b>currently ongoing/planned</b> (IATI Implementation or Pipeline), so recently-closed programmes are included. Each programme's country is its primary recipient (highest reported share); multi-country programmes are marked &ldquo;+&rdquo;.</p>
+   <h2>Provenance — every figure is one of</h2>
+   <div class="tagdef"><b>REPORTED</b> — straight from the programme's own IATI record (budget, dates, reach, baseline/target/actual). Real.</div>
+   <div class="tagdef"><b>DERIVED</b> — computed from reported figures: duration from dates, ≈USD via FX, real (constant-2024) USD via US CPI, achieved share = actual/target.</div>
+   <div class="tagdef"><b>ESTIMATE</b> — an educated value anchored on comparable reporters, always tagged. This dataset ships none: IATI's reach and target/actual fields proved too inconsistent to anchor a reliable cost or achievement estimate.</div>
+   <div class="tagdef"><b>GAP</b> — no defensible basis, so left blank — never guessed (see cost-per-beneficiary).</div>
+   <h2>Key caveats</h2>
+   <ol class="cav">
+    <li><b>Cost per beneficiary is deliberately not computed.</b> IATI reach indicators are non-comparable — they mix direct beneficiaries, indirect/population reach (one activity claimed 30,000,000 reached) and non-people counts (hectares, research products). Dividing budget by these is meaningless; raw reach is kept with its indicator label so you can judge each. For unit costs use sector studies, Sphere and cluster guidance.</li>
+    <li><b>Targets vs actuals.</b> Where both are reported, actuals frequently fall well short (e.g. 80 of 600 households). Design to expected actuals, not nominal targets.</li>
+    <li><b>Double counting.</b> The same activity can be reported by funder, recipient and implementer under different IDs. Deduped by IATI identifier, but residual funding-chain overlap remains.</li>
+    <li><b>Coverage.</b> Multilaterals are well represented globally, but programmes reported above country level (no single recipient country) are excluded by the developing-country focus, and a few large multilateral facilities publish only at aggregate level. For country macro data use the World Bank API.</li>
+    <li><b>Sample &amp; medians.</b> Each sector embeds a <b>representative</b> draw (~900 per sector, taken in the datastore&rsquo;s natural order &mdash; <b>not</b> ranked by budget &mdash; plus all that report reach) from the larger recent universe shown below. Because it is no longer budget-ranked, budget medians approximate the population rather than skewing high. It remains an IATI-only sample, so treat medians as indicative, not a census; for the authoritative full population use the OECD CRS or the complete IATI Datastore.</li>
+    <li><b>FX is indicative.</b> ≈USD uses fixed rates (below), not date-matched — order-of-magnitude only. Edit them and the grids recompute live.</li>
+    <li><b>Providing country (bilateral).</b> For bilateral programmes the funder/providing country is <b>inferred</b> from the funding organisation (IATI participating-org with role = funding) or the reporting organisation — via its ISO registration prefix or a name/agency match — and tagged as inferred. Where it can&rsquo;t be determined confidently it is left blank, never guessed.</li>
+    <li><b>Inflation &amp; PPP.</b> The <b>USD</b> toggle (sidebar) switches nominal vs <b>real</b> constant-2024 USD, deflating each programme by its start-year using US CPI (World Bank, base 2024). PPP adjustment is <b>deliberately omitted</b>: donor budgets are spent on a shifting mix of imported and local goods, so converting them to local purchasing-power terms would imply a precision the data does not support.</li>
+   </ol>
+   <h2>FX rates — indicative (≈USD per unit), editable</h2>
+   <div id="fx" class="fxgrid"></div>
+   <h2>Recent IATI universe by sector (started since 2021-06-02)</h2>
+   <table class="mtable"><thead><tr><th>Sector</th><th>Stream</th><th class="c-num">Recent total</th></tr></thead><tbody><tr><td>Emergency response</td><td>Humanitarian</td><td class='c-num'>14,456</td></tr><tr><td>Basic drinking water</td><td>WASH</td><td class='c-num'>1,354</td></tr><tr><td>Public sector policy & PFM</td><td>Governance/Capacity</td><td class='c-num'>5,141</td></tr><tr><td>Civil society & participation</td><td>Governance/Capacity</td><td class='c-num'>16,352</td></tr><tr><td>Primary education</td><td>Development</td><td class='c-num'>2,162</td></tr><tr><td>Agricultural development</td><td>Development</td><td class='c-num'>4,520</td></tr><tr><td>Basic health care</td><td>Development</td><td class='c-num'>5,963</td></tr></tbody></table>
+   <h2>Refresh &amp; extend</h2>
+   <p>Regenerate with the Python pipeline: <b>setup_geo.py</b> builds the developing-country + region reference from the World Bank API, <b>pull.py</b> fetches and classifies (edit the sector list and caps at the top), <b>build_html.py</b> rebuilds this page. For production, point pull.py at the official IATI v3 datastore with a free API key instead of the no-key mirror.</p>
+  </div>
+  <footer>Benchmark DB · IATI via Code for IATI · 3,388 programmes across 125 developing countries / 700 reported indicators · generated 2026-06-02 · every figure is REPORTED or DERIVED — no fabricated benchmarks.</footer>
+ </section>
+
+<div id="cardModal" class="cmodal" hidden><div class="cmodal-bg" data-close="1"></div><div class="cmodal-card" role="dialog" aria-modal="true"><button class="cmodal-x" data-close="1" aria-label="Close">×</button><div id="cardBody"></div></div></div>
+</main></div>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body></html>
