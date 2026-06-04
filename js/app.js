@@ -60,11 +60,13 @@ function countUp(el,to,fmt){ if(!el) return; const from=(typeof el._val==="numbe
 
 function renderStats(rows){
   const n=rows.length, medB=median(rows.map(r=>r._usd)), medD=median(rows.map(r=>r._dur));
-  const wr=rows.filter(r=>r.re).length;
+  const wr=rows.filter(r=>r.re).length, noFx=rows.filter(r=>r._usd==null).length;
   countUp(document.getElementById("st-n"),n,v=>fmtNum(Math.round(v)));
   countUp(document.getElementById("st-budget"),medB,fmtCompact);
   countUp(document.getElementById("st-dur"),medD,v=>(v==null?"—":Math.round(v)));
   countUp(document.getElementById("st-res"),n?wr/n:null,fmtPct);
+  const basis=BASIS==="real"?"≈ real 2024 USD (CPI)":"≈ nominal USD · FX";
+  setText("st-budget-sub",basis+(noFx?" · "+nf.format(noFx)+" excl. (no currency)":""));
 }
 
 function statusPill(s){ if(!s) return "<span class='dash'>–</span>"; const cls=STATUS_CLASS[s]||"st-clo"; return "<span class='stp "+cls+"'>"+esc(s)+"</span>"; }
@@ -82,7 +84,7 @@ function renderHead(trId,cols,state,strkeys){ const tr=document.getElementById(t
     return "<th class='"+c.c+(nosort?" nosort":"")+"'"+(nosort?"":" data-key='"+c.k+"'")+(isOn?" data-on='1'":"")+">"+c.t+arr+"</th>"; }).join(""); }
 
 function renderPrograms(){
-  PCOLS[10].t="≈ USD"+(BASIS==="real"?" ’24":""); setText("st-budget-sub",BASIS==="real"?"≈ real 2024 USD (CPI)":"≈ nominal USD · FX");
+  PCOLS[10].t="≈ USD"+(BASIS==="real"?" ’24":"");
   const filtered=filterPrograms(); const total=filtered.length;
   let rows=sortRows(filtered,PS.sort,PS.dir);
   const pages=Math.max(1,Math.ceil(total/PS.size)); if(PS.page>pages) PS.page=pages;

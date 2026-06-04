@@ -111,10 +111,10 @@ select{cursor:pointer}
 .legend b{color:var(--text)}
 
 /* grid */
-.gridwrap{background:var(--panel);border:1px solid var(--line);border-radius:12px 12px 0 0;overflow-x:auto;box-shadow:var(--shadow)}
+.gridwrap{background:var(--panel);border:1px solid var(--line);border-radius:12px 12px 0 0;overflow:auto;max-height:72vh;box-shadow:var(--shadow)}
 table.grid{border-collapse:collapse;width:100%;min-width:1240px}
 .grid thead th{font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--text2);font-weight:600;text-align:left;
- padding:12px 13px;white-space:nowrap;cursor:pointer;position:sticky;top:0;background:var(--panel2);border-bottom:1.5px solid var(--line2);user-select:none}
+ padding:12px 13px;white-space:nowrap;cursor:pointer;position:sticky;top:0;z-index:2;background:var(--panel2);border-bottom:1.5px solid var(--line2);user-select:none}
 .grid thead th:hover{color:var(--text)}
 .grid thead th[data-on]{color:var(--accent-ink)}
 .grid thead th.nosort{cursor:default}
