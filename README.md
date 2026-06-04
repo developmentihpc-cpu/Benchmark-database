@@ -110,7 +110,10 @@ must come before `app.js` (it does, in `index.html`).
 - **Plan a programme** — pick a need, get a benchmark from comparable programmes,
   then adjust the plan to fit a budget.
 - **Reported outcomes** — indicator-level baseline → target → actual values.
-- **#read_me** — full method, provenance and caveats.
+- **#read_me** — full method, provenance, caveats, and a live **data-quality /
+  coverage** panel (how complete each field is across the sample). The ≈USD
+  figure exposes the exact FX/CPI factor applied per programme (grid cell
+  tooltip and the detail card's "FX applied" line).
 
 ### Shareable / deep-linkable URLs
 

@@ -16,6 +16,8 @@ function median(arr){ const a=arr.filter(v=>typeof v==="number"&&!isNaN(v)).sort
 let BASIS="nominal";
 function deflF(y){ if(BASIS!=="real"||typeof DEFLATOR==="undefined"||!DEFLATOR.f) return 1; const f=DEFLATOR.f[String(y)]; return (typeof f==="number")?f:1; }
 function usdOf(r){ const x=RATES[r.c]; if(typeof x!=="number") return null; return r.a*x*deflF(r.year); }
+function fxNote(p){ const r=RATES[p.c]; if(typeof r!=="number") return "no FX rate for "+(p.c||"(no currency reported)")+" — excluded from USD figures";
+  let s=(p.c||"?")+"→USD ×"+r; if(BASIS==="real"){ const f=deflF(p.year); if(f!==1) s+=" · US CPI ×"+f.toFixed(3)+" → 2024"; } return s; }
 
 PROGRAMS.forEach(p=>{ p._dur=durMonths(p.st,p.en); });
 OUTCOMES.forEach(o=>{ o._ach=(typeof o.tg==="number"&&o.tg>0&&typeof o.ac==="number")?o.ac/o.tg:null; });
@@ -103,7 +105,7 @@ function renderPrograms(){
      "<td class='c-dim'>"+esc(p.st||"—")+"</td>"+"<td class='c-dim'>"+esc(p.en||"—")+"</td>"+
      "<td class='c-num'>"+(p._dur==null?"—":p._dur)+"</td>"+
      "<td class='c-num rep'>"+esc(p.c)+" "+nf.format(Math.round(p.a))+"<span class='sub'>"+esc(p.b)+"</span></td>"+
-     "<td class='c-num strong'>"+fmtUSD(p._usd)+"</td>"+
+     "<td class='c-num strong' title='"+esc(fxNote(p))+"'>"+fmtUSD(p._usd)+"</td>"+
      "<td class='c-num rep' title='"+esc(p.rb||"")+"'>"+(p.rc===""||p.rc==null?"—":fmtNum(p.rc))+(p.rc&&p.rb?"<span class='sub'>"+esc((p.rb||"").slice(0,24))+"</span>":"")+"</td>"+
      "<td class='c-mid'>"+(p.re?"<span class='pill ok'>yes</span>":"<span class='dash'>–</span>")+"</td>"+
      "<td class='c-mid'><span class='rowmore'>open ›</span></td></tr>";
@@ -111,6 +113,7 @@ function renderPrograms(){
   const s=total?start+1:0,e=Math.min(start+PS.size,total);
   setText("p-count",nf.format(total)); setText("p-range",nf.format(s)+"–"+nf.format(e)); setText("p-page",PS.page+" / "+pages);
   setText("sb-n",nf.format(total));
+  { const tbl=document.getElementById("pb").closest("table"); if(tbl) tbl.classList.toggle("virtual",slice.length>200); }
   renderHead("ph",PCOLS,PS); renderStats(filtered); syncURL();
 }
 
@@ -132,6 +135,7 @@ function renderOutcomes(){
   }).join("")||"<tr><td colspan='9' class='empty'>No outcomes match these filters.</td></tr>";
   const s=total?start+1:0,e=Math.min(start+OS.size,total);
   setText("o-count",nf.format(total)); setText("o-range",nf.format(s)+"–"+nf.format(e)); setText("o-page",OS.page+" / "+pages);
+  { const tbl=document.getElementById("ob").closest("table"); if(tbl) tbl.classList.toggle("virtual",slice.length>200); }
   renderHead("oh",OCOLS,OS); syncURL();
 }
 
@@ -188,6 +192,28 @@ function buildFX(){ const wrap=document.getElementById("fx"); if(!wrap) return; 
   wrap.innerHTML=keys.map(k=>"<label class='fxrow'><span>"+k+"</span><input type='number' step='0.0001' data-cur='"+k+"' value='"+RATES[k]+"'></label>").join("");
   wrap.querySelectorAll("input").forEach(inp=>inp.addEventListener("input",e=>{ const v=parseFloat(e.target.value);
     RATES[e.target.dataset.cur]=isNaN(v)?undefined:v; recomputeUSD(); renderPrograms(); renderBenchmarks(); if(typeof renderPlanRec==="function"){renderPlanRec();renderPlanCalc();} })); }
+
+/* ---------- data quality / coverage ---------- */
+function dqTile(k,v,s){ return "<div class='dqcard'><div class='dq-k'>"+esc(k)+"</div><div class='dq-v'>"+v+"</div><div class='dq-s'>"+esc(s)+"</div></div>"; }
+function renderDQ(){
+  const el=document.getElementById("dq"); if(!el) return; const N=PROGRAMS.length, pc=(n,d)=>d?Math.round(100*n/d)+"%":"—";
+  const priced=PROGRAMS.filter(p=>p._usd!=null).length, noCur=PROGRAMS.filter(p=>!p.c).length;
+  const dur=PROGRAMS.filter(p=>p._dur!=null).length, end=PROGRAMS.filter(p=>p.en).length;
+  const res=PROGRAMS.filter(p=>p.re).length, reach=PROGRAMS.filter(p=>p.rc!=null&&p.rc!=="").length;
+  const bilat=PROGRAMS.filter(p=>p.d==="Bilateral"), bilatProv=bilat.filter(p=>p.pcc).length, multi=PROGRAMS.filter(p=>p.multi).length;
+  const years=PROGRAMS.map(p=>p.year).filter(Boolean), ymin=Math.min(...years), ymax=Math.max(...years);
+  const O=OUTCOMES.length, oTgt=OUTCOMES.filter(o=>typeof o.tg==="number"&&o.tg>0).length, oAct=OUTCOMES.filter(o=>typeof o.ac==="number").length;
+  el.innerHTML=
+    dqTile("Budget priced to USD",pc(priced,N),fmtNum(priced)+" of "+fmtNum(N)+" · "+fmtNum(noCur)+" report no currency")+
+    dqTile("Duration derivable",pc(dur,N),"valid start + end dates")+
+    dqTile("End date present",pc(end,N),fmtNum(end)+" programmes")+
+    dqTile("Report results",pc(res,N),fmtNum(res)+" programmes")+
+    dqTile("Report reach",pc(reach,N),fmtNum(reach)+" — sparse & non-comparable")+
+    dqTile("Bilateral: provider inferred",pc(bilatProv,bilat.length),"of "+fmtNum(bilat.length)+" bilateral")+
+    dqTile("Multi-country",pc(multi,N),"flagged with +")+
+    dqTile("Indicators (outcomes)",fmtNum(O),"target "+pc(oTgt,O)+" · actual "+pc(oAct,O))+
+    dqTile("Start-year range",ymin+"–"+ymax,"reported activity start");
+}
 
 /* ---------- Plan a programme ---------- */
 const COUNTRY_REGION=Object.assign({},(typeof DEVREGION!=="undefined"?DEVREGION:{}));
@@ -332,7 +358,7 @@ function openCard(p){ if(!p) return;
   const os=OUTCOMES.filter(o=>o.n===p.n);
   let h="<div class='cardh'><h2>"+esc(p.n)+"</h2><div class='sub'>"+statusPill(p.sta)+chip(p.d)+"<span>"+esc(p.sn)+"</span><span class='muted'>· "+esc(p.s)+"</span>"+((p.d==="Bilateral"&&p.pcc)?"<span class='flow'>"+esc(p.pcc)+" → "+esc(p.cc)+"</span>":"")+"</div></div>";
   h+="<div class='cardsec'><div class='cardgrid'>"+cf("Receiving country",esc(p.co)+(p.multi?" <span class='muted'>(+ others)</span>":""))+((p.d==="Bilateral")?cf("Providing country",(p.pn?esc(p.pn)+" <span class='muted'>("+esc(p.pcc)+", inferred)</span>":"—")):"")+cf("Funder",esc(p.fn||p.r||"—"))+cf("Region",esc(p.rg))+cf("Reporting org",esc(p.r)+" <span class='muted'>("+esc(p.rt||"—")+")</span>")+cf("Sector code",esc(p.sc))+"</div></div>";
-  h+="<div class='cardsec'><h3>Finance &amp; timeline</h3><div class='cardgrid'>"+cfBig("Budget",esc(p.c)+" "+nf.format(Math.round(p.a)))+cfBig(BASIS==="real"?"≈ real 2024 USD":"≈ nominal USD",fmtUSD(p._usd))+cf("Reported as",esc(p.b||"—"))+cf("Start",esc(p.st||"—"))+cf("End",esc(p.en||"—"))+cf("Duration",(p._dur==null?"—":p._dur+" months"))+"</div></div>";
+  h+="<div class='cardsec'><h3>Finance &amp; timeline</h3><div class='cardgrid'>"+cfBig("Budget",esc(p.c)+" "+nf.format(Math.round(p.a)))+cfBig(BASIS==="real"?"≈ real 2024 USD":"≈ nominal USD",fmtUSD(p._usd))+cf("FX applied",esc(fxNote(p)))+cf("Reported as",esc(p.b||"—"))+cf("Start",esc(p.st||"—"))+cf("End",esc(p.en||"—"))+cf("Duration",(p._dur==null?"—":p._dur+" months"))+"</div></div>";
   let rr=cf("Reach (reported)",(p.rc===""||p.rc==null)?"—":fmtNum(p.rc));
   if(p.rc&&p.rb) rr+=cf("Reach indicator",esc(p.rb));
   rr+=cf("Reports results?",p.re?"Yes":"No");
@@ -560,7 +586,7 @@ function init(){
   const _pb=document.getElementById("pb"); if(_pb) _pb.addEventListener("click",e=>{ const tr=e.target.closest&&e.target.closest("tr.crow-click"); if(tr) openCard(PROGRAMS[+tr.getAttribute("data-i")]); });
   const _rec=document.getElementById("pl-rec"); if(_rec) _rec.addEventListener("click",e=>{ const row=e.target.closest&&e.target.closest(".pcomp-row[data-i]"); if(row) openCard(PROGRAMS[+row.getAttribute("data-i")]); });
 
-  setTheme("light"); buildFX(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
+  setTheme("light"); buildFX(); renderDQ(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
   route(); URL_READY=true; syncURL();
 }
 document.addEventListener("DOMContentLoaded",init);

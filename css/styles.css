@@ -357,3 +357,13 @@ svg.chart .cpt{fill:var(--accent);opacity:.4}
   .topbar{padding-top:18px}
 }
 @media(prefers-reduced-motion:reduce){.sidebar{transition:none}}
+
+/* large-list perf: skip rendering off-screen rows (only when many rows shown) */
+.grid.virtual tbody tr{content-visibility:auto;contain-intrinsic-size:0 56px}
+
+/* data-quality coverage tiles */
+.dqgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(186px,1fr));gap:12px;margin:8px 0 6px}
+.dqcard{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.dq-k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text2)}
+.dq-v{font-family:var(--serif);font-weight:600;font-size:21px;margin-top:4px;font-variant-numeric:tabular-nums;color:var(--gold-ink)}
+.dq-s{font-size:10.5px;color:var(--faint);margin-top:3px;line-height:1.4}
