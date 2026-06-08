@@ -124,11 +124,12 @@ npm test          # alias for: node --test
 - **Countries** — pick a country for a one-screen profile (spend, sectors,
   donors, recent programmes) with jump-offs to the filtered grid or the planner.
 - **Plan a programme** — scope by sector, country, donor type and **donor
-  country**, see what comparable programmes *typically cost* (framed as context,
-  not a target), then pressure-test your plan: budget/duration/burn percentile
-  strips, plain-language reads, symmetric feasibility flags, a concentration
-  warning when the cohort is narrow, an outcome reality-check (median actual vs
-  target), and a printable one-page **design brief**.
+  country**; seed your plan from the **cohort median or a single comparable
+  programme**; then pressure-test it: budget/duration/burn percentile strips,
+  plain-language reads, symmetric feasibility flags, a concentration warning when
+  the cohort is narrow, an outcome reality-check (median actual vs target), a
+  printable one-page **design brief**, and a **basket** to collect several plans
+  (saved in your browser) and export them together as one CSV.
 - **Reported outcomes** — indicator-level baseline → target → actual values.
 - **#read_me** — full method, provenance, caveats, and a live **data-quality /
   coverage** panel (how complete each field is across the sample). The ≈USD

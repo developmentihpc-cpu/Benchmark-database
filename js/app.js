@@ -245,7 +245,7 @@ function renderDQ(){
 const COUNTRY_REGION=Object.assign({},(typeof DEVREGION!=="undefined"?DEVREGION:{}));
 PROGRAMS.forEach(p=>{ if(p.co&&!COUNTRY_REGION[p.co]) COUNTRY_REGION[p.co]=p.rg; });
 const ALL_COUNTRIES=(typeof DEVREGION!=="undefined")?Object.keys(DEVREGION).sort():uniq(PROGRAMS,"co");
-const PL={country:"",sector:"Basic health care",donor:"",prov:"",need:null,budget:null,dur:null,target:null,link:false,base:null};
+const PL={country:"",sector:"Basic health care",donor:"",prov:"",need:null,budget:null,dur:null,target:null,link:false,base:null,source:null};
 function setVal(id,v){ const el=document.getElementById(id); if(el) el.value=(v==null?"":v); }
 /* num, quantile, statsOf, pctRank — see js/lib.js */
 function planCohort(){
@@ -301,18 +301,26 @@ function renderPlanRec(){
   "</div>";
   if(provTopStr) h+="<p class='pmix'>Typical providing countries: <b>"+provTopStr+"</b></p>";
   if(ach) h+="<p class='pach'>Reality check: across <b>"+ach.n+"</b> comparable indicators with a target and an actual, the median actual was <b>"+Math.round(ach.med*100)+"%</b> of target; "+Math.round(ach.hit75*100)+"% reached ≥75%. <span class='muted'>IATI target/actual data is noisy — design to expected actuals, not nominal targets.</span></p>";
-  h+="<div class='pcomp'><div class='pcomp-h'>Closest comparable programmes</div>"+comp.map(p=>
-    "<div class='pcomp-row crow-click' data-i='"+p._i+"'><span class='pcn'>"+esc(p.n)+"</span><span class='pcm'>"+esc(p.co)+" · "+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+(p._dur==null?"—":p._dur+" mo")+" · <span class='rowmore'>open ›</span></span></div>").join("")+"</div>";
-  h+="<button id='pl-use' class='btn'>Use as a starting point →</button>";
+  h+="<div class='pcomp'><div class='pcomp-h'>Comparable programmes — pick one to start from, or use the cohort median</div>"+comp.map(p=>
+    "<div class='pcomp-row' data-i='"+p._i+"'><div class='pcomp-info crow-click' data-i='"+p._i+"'><span class='pcn'>"+esc(p.n)+"</span><span class='pcm'>"+esc(p.co)+" · "+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+(p._dur==null?"—":p._dur+" mo")+" · <span class='rowmore'>open ›</span></span></div><button class='pl-use-proj' data-i='"+p._i+"' title='Start your plan from this programme'>Use →</button></div>").join("")+"</div>";
+  h+="<button id='pl-use' class='btn'>Use cohort median as a starting point →</button>";
   el.innerHTML=h;
-  const u=document.getElementById("pl-use"); if(u) u.addEventListener("click",()=>seedPlan(b.med,d.med));
+  const u=document.getElementById("pl-use"); if(u) u.addEventListener("click",()=>seedPlan(b.med,d.med,"cohort median"));
 }
-function seedPlan(medBudget,medDur){
+function scrollToPlan(){ const pw=document.getElementById("pl-planwrap"); if(pw&&pw.scrollIntoView) pw.scrollIntoView({behavior:"smooth",block:"start"}); }
+function seedPlan(medBudget,medDur,source){
   PL.budget=medBudget?Math.round(medBudget):null; PL.dur=medDur?Math.round(medDur):null;
-  if(PL.need) PL.target=PL.need; PL.base={budget:PL.budget,target:PL.target};
+  if(PL.need) PL.target=PL.need; PL.base={budget:PL.budget,target:PL.target}; PL.source=source||"cohort median";
   setVal("pl-budget",PL.budget); setVal("pl-dur",PL.dur); setVal("pl-target",PL.target);
-  renderPlanCalc();
-  const pw=document.getElementById("pl-planwrap"); if(pw&&pw.scrollIntoView) pw.scrollIntoView({behavior:"smooth",block:"start"});
+  renderPlanCalc(); scrollToPlan();
+}
+function seedFromProject(p){
+  if(!p) return;
+  PL.budget=p._usd!=null?Math.round(p._usd):null; PL.dur=p._dur!=null?p._dur:null;
+  PL.target=(typeof p.rc==="number")?p.rc:(PL.need||null);
+  PL.base={budget:PL.budget,target:PL.target}; PL.source="project: "+p.n;
+  setVal("pl-budget",PL.budget); setVal("pl-dur",PL.dur); setVal("pl-target",PL.target);
+  renderPlanCalc(); scrollToPlan();
 }
 function calcStat(k,v,s){ return "<div class='cs1'><div class='cs1-k'>"+esc(k)+"</div><div class='cs1-v'>"+v+"</div><div class='cs1-s'>"+esc(s)+"</div></div>"; }
 function strip(label,st,val,log,fmt){
@@ -336,7 +344,8 @@ function renderPlanCalc(){
   const burn=(budget&&dur)?budget/dur:null, cpp=(budget&&target)?budget/target:null;
   const bp=pctRank(b.arr,budget), dp=pctRank(d.arr,dur), burnp=(burn!=null)?pctRank(bn.arr,burn):null;
   const durFmt=v=>Math.round(v)+" mo", burnFmt=v=>fmtCompact(v)+"/mo";
-  let h="<div class='pcalc'>"+
+  let h=PL.source?"<p class='pl-srcline'>Seeded from <b>"+esc(PL.source)+"</b> — a starting point; adjust below.</p>":"";
+  h+="<div class='pcalc'>"+
     calcStat("Monthly burn",burn==null?"—":fmtCompact(burn)+"/mo","budget ÷ duration")+
     calcStat("Cost / person",cpp==null?"—":"$"+nf.format(Math.round(cpp)),target?"your budget ÷ your target":"set a target")+
     calcStat("Budget vs peers",bp==null?"—":ord(Math.round(bp*100))+" pct","of "+b.n+" comparables")+
@@ -373,6 +382,36 @@ function exportPlan(){ const {rows,scope}=planCohort(); const b=statsOf(rows,"_u
   add("PLAN monthly burn USD",(PL.budget&&PL.dur)?Math.round(PL.budget/PL.dur):""); add("PLAN cost per person USD",(PL.budget&&PL.target)?Math.round(PL.budget/PL.target):"");
   if(PL.budget!=null) add("PLAN budget percentile",Math.round(pctRank(b.arr,PL.budget)*100));
   dl("programme_plan.csv",L.join("\n")); }
+
+/* ---------- plan basket ---------- */
+let BASKET=[];
+function loadBasket(){ try{ BASKET=JSON.parse(localStorage.getItem("bdb_basket")||"[]")||[]; }catch(e){ BASKET=[]; } }
+function saveBasket(){ try{ localStorage.setItem("bdb_basket",JSON.stringify(BASKET)); }catch(e){} }
+function snapshotPlan(){
+  const {rows,scope}=planCohort(); const b=statsOf(rows,"_usd");
+  const burn=(PL.budget&&PL.dur)?PL.budget/PL.dur:null, cpp=(PL.budget&&PL.target)?PL.budget/PL.target:null;
+  return { sector:PL.sector||"", country:PL.country||"Any", donor:PL.donor||"Any", prov:PL.prov||"Any",
+    scope:scope, n:rows.length, source:PL.source||"cohort median", basis:usdBasisLabel(),
+    budget:PL.budget==null?null:Math.round(PL.budget), dur:PL.dur==null?null:PL.dur, target:PL.target==null?null:PL.target,
+    burn:burn==null?null:Math.round(burn), cpp:cpp==null?null:Math.round(cpp),
+    bpct:(PL.budget!=null&&b.arr.length)?Math.round(pctRank(b.arr,PL.budget)*100):null };
+}
+function addToBasket(){ BASKET.push(snapshotPlan()); saveBasket(); renderBasket();
+  const el=document.getElementById("pl-basket"); if(el&&el.scrollIntoView) el.scrollIntoView({behavior:"smooth",block:"nearest"}); }
+function renderBasket(){
+  const el=document.getElementById("pl-basket"); if(!el) return;
+  if(!BASKET.length){ el.innerHTML="<div class='pcard-h'><span class='pstep'>4</span><h2>Saved plans</h2></div><p class='pscope'>Build a plan above and <b>Add to basket</b> to collect several, then export them together.</p>"; return; }
+  let h="<div class='pcard-h'><span class='pstep'>4</span><h2>Saved plans <span class='bk-n'>"+BASKET.length+"</span></h2><div class='tb-actions'><button id='bk-clear' class='btn ghost'>Clear</button><button id='bk-export' class='btn'>⤓ Export all ("+BASKET.length+")</button></div></div>";
+  h+="<div class='bk-list'>"+BASKET.map((p,i)=>"<div class='bk-row'><div class='bk-main'><span class='bk-title'>"+esc(p.sector)+(p.country&&p.country!=="Any"?" · "+esc(p.country):"")+(p.prov&&p.prov!=="Any"?" · "+esc(p.prov):"")+"</span><span class='bk-sub'>"+(p.budget!=null?fmtCompact(p.budget):"—")+" · "+(p.dur!=null?p.dur+" mo":"—")+(p.target!=null?" · "+fmtNum(p.target)+" reach":"")+" · seeded from "+esc(p.source)+"</span></div><button class='bk-x' data-i='"+i+"' aria-label='Remove plan'>×</button></div>").join("")+"</div>";
+  el.innerHTML=h;
+}
+function exportBasket(){
+  if(!BASKET.length) return;
+  const cols=[["Sector","sector"],["Country","country"],["Donor type","donor"],["Donor country","prov"],["Cohort","scope"],["Comparables (n)","n"],["Seeded from","source"],["USD basis","basis"],["Budget USD","budget"],["Duration (mo)","dur"],["Target reach","target"],["Monthly burn USD","burn"],["Cost per person USD","cpp"],["Budget percentile","bpct"]];
+  const L=[cols.map(c=>cc(c[0])).join(",")];
+  BASKET.forEach(p=>L.push(cols.map(c=>cc(p[c[1]]==null?"":p[c[1]])).join(",")));
+  dl("programme_plans.csv",L.join("\n"));
+}
 function briefRow(k,v){ return "<tr><th>"+esc(k)+"</th><td>"+v+"</td></tr>"; }
 function briefCmp(k,med,iqr,you){ return "<tr><th>"+esc(k)+"</th><td>"+med+"</td><td>"+iqr+"</td><td>"+you+"</td></tr>"; }
 function buildPlanBrief(){
@@ -420,8 +459,14 @@ function wirePlan(){
   on("pl-dur","input",e=>{PL.dur=num(e.target.value);renderPlanCalc();});
   on("pl-target","input",e=>{PL.target=num(e.target.value); PL.base={budget:PL.budget,target:PL.target}; renderPlanCalc();});
   on("pl-link","change",e=>{PL.link=e.target.checked; PL.base={budget:PL.budget,target:PL.target};});
-  on("pl-reset","click",()=>{const {rows}=planCohort(); const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur"); seedPlan(b.med,d.med);});
-  on("pl-export","click",exportPlan);
+  on("pl-reset","click",()=>{const {rows}=planCohort(); const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur"); seedPlan(b.med,d.med,"cohort median");});
+  on("pl-add","click",addToBasket);
+  const _bk=document.getElementById("pl-basket"); if(_bk) _bk.addEventListener("click",e=>{
+    if(e.target.closest("#bk-export")){ exportBasket(); return; }
+    if(e.target.closest("#bk-clear")){ BASKET=[]; saveBasket(); renderBasket(); return; }
+    const x=e.target.closest(".bk-x"); if(x){ BASKET.splice(+x.getAttribute("data-i"),1); saveBasket(); renderBasket(); }
+  });
+  loadBasket(); renderBasket();
   renderPlanRec(); renderPlanCalc();
 }
 function initPlanFromURL(){
@@ -740,7 +785,9 @@ function init(){
   document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeCard(); setNav(false); if(_fp)_fp.hidden=true; if(_sm)_sm.hidden=true; } });
   const _pb=document.getElementById("pb"); if(_pb) _pb.addEventListener("click",e=>{ const tr=e.target.closest&&e.target.closest("tr.crow-click"); if(tr) openCard(PROGRAMS[+tr.getAttribute("data-i")]); });
   const _ob=document.getElementById("ob"); if(_ob) _ob.addEventListener("click",e=>{ const tr=e.target.closest&&e.target.closest("tr.crow-click"); if(tr) openCard(PROGRAMS[+tr.getAttribute("data-i")]); });
-  const _rec=document.getElementById("pl-rec"); if(_rec) _rec.addEventListener("click",e=>{ const row=e.target.closest&&e.target.closest(".pcomp-row[data-i]"); if(row) openCard(PROGRAMS[+row.getAttribute("data-i")]); });
+  const _rec=document.getElementById("pl-rec"); if(_rec) _rec.addEventListener("click",e=>{
+    const use=e.target.closest&&e.target.closest(".pl-use-proj"); if(use){ seedFromProject(PROGRAMS[+use.getAttribute("data-i")]); return; }
+    const info=e.target.closest&&e.target.closest(".pcomp-info[data-i]"); if(info) openCard(PROGRAMS[+info.getAttribute("data-i")]); });
 
   setTheme("light"); buildFX(); renderDQ(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
   route(); URL_READY=true; syncURL();

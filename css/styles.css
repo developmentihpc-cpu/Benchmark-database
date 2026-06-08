@@ -235,8 +235,23 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background
 .rowmore{color:var(--accent-ink);font-size:12px;white-space:nowrap}
 tr.crow-click{cursor:pointer}
 tr.crow-click:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent)}
-.pcomp-row.crow-click{cursor:pointer;border-radius:10px;margin:0 -8px;padding-left:8px;padding-right:8px}
-.pcomp-row.crow-click:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.pcomp-row{display:flex;align-items:center;gap:10px}
+.pcomp-info{flex:1;min-width:0;cursor:pointer;border-radius:10px;margin:0 -8px;padding:2px 8px}
+.pcomp-info:hover{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.pcomp-info:hover .pcn{color:var(--accent-ink)}
+.pl-use-proj{flex:none;background:color-mix(in srgb,var(--accent) 12%,var(--panel));color:var(--accent-ink);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);border-radius:999px;padding:5px 12px;font:600 11.5px var(--sans);cursor:pointer;white-space:nowrap}
+.pl-use-proj:hover{background:color-mix(in srgb,var(--accent) 22%,var(--panel))}
+.pl-srcline{font-size:12px;color:var(--text2);margin:0 0 11px;background:var(--panel2);border-left:3px solid var(--accent);border-radius:0 7px 7px 0;padding:7px 11px}
+.pl-srcline b{color:var(--accent-ink)}
+.bk-n{font-size:12px;background:var(--side-active-bg);color:var(--accent-ink);border-radius:999px;padding:1px 9px;font-family:var(--sans);font-weight:600;vertical-align:middle;margin-left:7px}
+.bk-list{display:flex;flex-direction:column;margin-top:4px}
+.bk-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.bk-row:first-child{border-top:0}
+.bk-main{flex:1;min-width:0}
+.bk-title{display:block;font-weight:600}
+.bk-sub{display:block;font-size:11.5px;color:var(--text2);margin-top:2px}
+.bk-x{flex:none;background:none;border:0;color:var(--faint);font-size:18px;line-height:1;cursor:pointer;padding:2px 7px;border-radius:7px}
+.bk-x:hover{color:var(--neg);background:var(--side-hover)}
 .cmodal{position:fixed;inset:0;z-index:80;display:flex;align-items:flex-start;justify-content:center;padding:5vh 16px}
 .cmodal[hidden]{display:none}
 .cmodal-bg{position:absolute;inset:0;background:rgba(20,30,40,.45);backdrop-filter:blur(2px)}
