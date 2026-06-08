@@ -121,6 +121,8 @@ npm test          # alias for: node --test
   programmes by start year, budget-vs-duration scatter, and a regional split.
 - **Countries** — pick a country for a one-screen profile (spend, sectors,
   donors, recent programmes) with jump-offs to the filtered grid or the planner.
+- **Compare** — put 2–4 countries, sectors, donor types or regions side by side
+  (medians, ranges, reporting rates), with the highest value per row highlighted.
 - **Plan a programme** — pick a need, get a benchmark from comparable programmes,
   then adjust the plan to fit a budget.
 - **Reported outcomes** — indicator-level baseline → target → actual values.
