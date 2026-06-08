@@ -350,21 +350,30 @@ function initPlanFromURL(){
 }
 
 /* ---------- programme detail card ---------- */
+const SECTOR_DESC={
+ "Emergency response":"Delivers emergency humanitarian relief — rapid assistance to people affected by conflict, disaster or displacement.",
+ "Basic drinking water":"Builds and rehabilitates water supply and sanitation — wells, boreholes, piped water, treatment and latrines.",
+ "Public sector policy & PFM":"Strengthens public-sector governance — policy, planning and public financial management.",
+ "Civil society & participation":"Supports civil society and civic participation — community organisations, rights and inclusion.",
+ "Primary education":"Supports primary education — schools, teaching, learning materials and access to basic schooling.",
+ "Agricultural development":"Develops agriculture and rural livelihoods — supporting farmers, crops, livestock and value chains.",
+ "Basic health care":"Provides basic health care — primary services, clinics, essential medicines and treatment."
+};
+function descOutputs(p){
+  const os=OUTCOMES.filter(o=>o.n===p.n);
+  if(!os.length) return [];
+  os.sort((a,b)=>(a.t==="output"?0:1)-(b.t==="output"?0:1));   // concrete outputs first
+  const seen=new Set(), items=[];
+  for(const o of os){ let t=(o.i||"").replace(/\s+/g," ").trim(); if(!t) continue; if(t.length>90) t=t.slice(0,88)+"…";
+    const k=t.toLowerCase(); if(seen.has(k)) continue; seen.add(k); items.push(t); if(items.length>=3) break; }
+  return items;
+}
 function progDesc(p){
-  const sec=(p.sn||"").toLowerCase();
-  let s1=(p.d?p.d+" ":"")+(sec?sec+" ":"")+"programme in "+(p.co||"an unspecified country")+(p.multi?" and other countries":"")+(p.rg?" ("+p.rg+")":"")+".";
-  s1=s1.charAt(0).toUpperCase()+s1.slice(1);
-  const funder=p.fn||p.r;
-  let s2=funder?("Funded by "+funder+(p.d==="Bilateral"&&p.pn?" ("+p.pn+")":"")+", with "):"With ";
-  s2+="a reported budget of "+(p.c?p.c+" ":"")+nf.format(Math.round(p.a))+(p._usd!=null?" (≈"+fmtCompact(p._usd)+(BASIS==="real"?" real ’24":"")+")":"");
-  if(p.st&&p.en) s2+=", running "+p.st+" to "+p.en+(p._dur!=null?" ("+p._dur+" months)":"");
-  else if(p._dur!=null) s2+=", over about "+p._dur+" months";
-  s2+=".";
-  const sw={Ongoing:"Currently ongoing",Planned:"Planned / pipeline",Finalisation:"In finalisation",Closed:"Completed",Suspended:"Suspended",Cancelled:"Cancelled"}[p.sta];
-  let s3=(sw?sw+". ":"")+(p.re?"Reports indicator results":"No indicator results reported");
-  if(p.rc!=null&&p.rc!=="") s3+="; reported reach "+nf.format(p.rc)+(p.rb?" — "+p.rb:"");
-  s3+=".";
-  return s1+" "+s2+" "+s3;
+  let s=SECTOR_DESC[p.sn]||((p.sn||"Development")+" programme.");
+  const outs=descOutputs(p);
+  if(outs.length) s+=" Reported outputs include "+outs.join("; ")+".";
+  else if(p.rb) s+=" Activity tracked: "+p.rb+".";
+  return s;
 }
 function eatt(s){ return esc(s); }
 function cf(k,v){ return "<div class='cfield'><span class='ck'>"+k+"</span><span class='cv'>"+v+"</span></div>"; }
@@ -379,7 +388,7 @@ function openCard(p){ if(!p) return;
   const dpRaw="https://d-portal.org/q.html?aid="+encodeURIComponent(p.id);
   const os=OUTCOMES.filter(o=>o.n===p.n);
   let h="<div class='cardh'><h2>"+esc(p.n)+"</h2><div class='sub'>"+statusPill(p.sta)+chip(p.d)+"<span>"+esc(p.sn)+"</span><span class='muted'>· "+esc(p.s)+"</span>"+((p.d==="Bilateral"&&p.pcc)?"<span class='flow'>"+esc(p.pcc)+" → "+esc(p.cc)+"</span>":"")+"</div></div>";
-  h+="<div class='cardsec cabout-sec'><p class='cabout'>"+esc(progDesc(p))+"</p><span class='tagmini'>derived — generated from this activity’s reported fields</span></div>";
+  h+="<div class='cardsec cabout-sec'><p class='cabout'>"+esc(progDesc(p))+"</p><span class='tagmini'>derived — inferred from sector &amp; reported indicators</span></div>";
   h+="<div class='cardsec'><div class='cardgrid'>"+cf("Receiving country",esc(p.co)+(p.multi?" <span class='muted'>(+ others)</span>":""))+((p.d==="Bilateral")?cf("Providing country",(p.pn?esc(p.pn)+" <span class='muted'>("+esc(p.pcc)+", inferred)</span>":"—")):"")+cf("Funder",esc(p.fn||p.r||"—"))+cf("Region",esc(p.rg))+cf("Reporting org",esc(p.r)+" <span class='muted'>("+esc(p.rt||"—")+")</span>")+cf("Sector code",esc(p.sc))+"</div></div>";
   h+="<div class='cardsec'><h3>Finance &amp; timeline</h3><div class='cardgrid'>"+cfBig("Budget",esc(p.c)+" "+nf.format(Math.round(p.a)))+cfBig(BASIS==="real"?"≈ real 2024 USD":"≈ nominal USD",fmtUSD(p._usd))+cf("FX applied",esc(fxNote(p)))+cf("Reported as",esc(p.b||"—"))+cf("Start",esc(p.st||"—"))+cf("End",esc(p.en||"—"))+cf("Duration",(p._dur==null?"—":p._dur+" months"))+"</div></div>";
   let rr=cf("Reach (reported)",(p.rc===""||p.rc==null)?"—":fmtNum(p.rc));
