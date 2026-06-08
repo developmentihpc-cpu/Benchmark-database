@@ -30,6 +30,9 @@ function recomputeUSD(){ PROGRAMS.forEach(p=>{ p._usd=usdOf(p); }); }
 recomputeUSD();
 PROGRAMS.forEach((p,i)=>{p._i=i;});
 const PROG_BY_NAME={}; PROGRAMS.forEach(p=>{ if(p.n!=null && !(p.n in PROG_BY_NAME)) PROG_BY_NAME[p.n]=p._i; });
+const OUT_BY_NAME={}; OUTCOMES.forEach(o=>{ (OUT_BY_NAME[o.n]=OUT_BY_NAME[o.n]||[]).push(o); });
+function ord(n){ const s=["th","st","nd","rd"],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+function usdBasisLabel(){ return BASIS==="real"?"real 2024 USD (CPI-adjusted)":"nominal USD"; }
 
 /* nf, fmtUSD, fmtCompact, fmtNum, fmtPct, esc — see js/lib.js */
 
@@ -228,43 +231,65 @@ function renderDQ(){
 const COUNTRY_REGION=Object.assign({},(typeof DEVREGION!=="undefined"?DEVREGION:{}));
 PROGRAMS.forEach(p=>{ if(p.co&&!COUNTRY_REGION[p.co]) COUNTRY_REGION[p.co]=p.rg; });
 const ALL_COUNTRIES=(typeof DEVREGION!=="undefined")?Object.keys(DEVREGION).sort():uniq(PROGRAMS,"co");
-const PL={country:"",sector:"Basic health care",donor:"",need:null,budget:null,dur:null,target:null,link:false,base:null};
+const PL={country:"",sector:"Basic health care",donor:"",prov:"",need:null,budget:null,dur:null,target:null,link:false,base:null};
 function setVal(id,v){ const el=document.getElementById(id); if(el) el.value=(v==null?"":v); }
 /* num, quantile, statsOf, pctRank — see js/lib.js */
 function planCohort(){
   let base=PROGRAMS.filter(p=>p.sn===PL.sector);
   if(PL.donor) base=base.filter(p=>p.d===PL.donor);
+  if(PL.prov) base=base.filter(p=>p.pn===PL.prov);
+  const tail=(PL.prov?PL.prov+" · ":"")+(PL.donor?PL.donor+" · ":"");
   if(PL.country){ const c=base.filter(p=>p.co===PL.country);
-    if(c.length>=8) return {rows:c,scope:"in "+PL.country};
+    if(c.length>=8) return {rows:c,scope:tail+"in "+PL.country};
     const rg=COUNTRY_REGION[PL.country]; const r=base.filter(p=>p.rg===rg);
-    if(rg&&r.length>=8) return {rows:r,scope:"in "+rg+" (few comparators in "+PL.country+")"};
-    return {rows:base,scope:"across developing countries (few comparators in "+PL.country+")"}; }
-  return {rows:base,scope:(PL.donor?PL.donor+" · ":"")+"across all developing countries"};
+    if(rg&&r.length>=8) return {rows:r,scope:tail+"in "+rg+" (few comparators in "+PL.country+")"};
+    return {rows:base,scope:tail+"across developing countries (few comparators in "+PL.country+")"}; }
+  return {rows:base,scope:tail+"across all developing countries"};
+}
+function burnStats(rows){ return statsOf(rows.map(function(r){ return { b:(r._usd!=null&&r._dur)?r._usd/r._dur:null }; }), "b"); }
+function cohortAch(rows){
+  var v=[]; rows.forEach(function(r){ (OUT_BY_NAME[r.n]||[]).forEach(function(o){ if(typeof o.tg==="number"&&o.tg>0&&typeof o.ac==="number") v.push(o.ac/o.tg); }); });
+  if(!v.length) return null;
+  return { n:v.length, med:median(v), hit75:v.filter(function(x){return x>=0.75;}).length/v.length, hit100:v.filter(function(x){return x>=1;}).length/v.length };
+}
+function concentration(rows){
+  if(rows.length<8) return null;
+  function topShare(key,onlyWith){ var m={},tot=0; rows.forEach(function(r){ var k=r[key]; if(onlyWith&&!r[onlyWith])return; if(k){m[k]=(m[k]||0)+1;tot++;} }); var e=Object.entries(m).sort(function(a,b){return b[1]-a[1];})[0]; return e&&tot?{v:e[0],share:e[1]/rows.length}:null; }
+  var checks=[];                                  // skip dimensions the user explicitly pinned
+  if(!PL.donor) checks.push(["donor type","d",null]);
+  if(!PL.prov) checks.push(["providing country","pn","pcc"]);
+  if(!PL.country) checks.push(["region","rg",null]);
+  for(var i=0;i<checks.length;i++){ var t=topShare(checks[i][1],checks[i][2]); if(t&&t.share>=0.6) return { msg:"Narrow benchmark: "+Math.round(t.share*100)+"% of these comparators share the same "+checks[i][0]+" ("+t.v+"). Treat the medians as indicative of that group, not the sector at large." }; }
+  return null;
 }
 function recStat(k,v,s){ return "<div class='rs1'><div class='rs1-k'>"+esc(k)+"</div><div class='rs1-v'>"+v+"</div><div class='rs1-s'>"+esc(s)+"</div></div>"; }
 function renderPlanRec(){
   const el=document.getElementById("pl-rec"); if(!el) return;
-  if(!PL.sector){ el.innerHTML="<div class='pcard-h'><span class='pstep'>2</span><h2>Recommended benchmark</h2></div><p class='pscope'>Choose an intervention / sector above to see a benchmark.</p>"; return; }
+  if(!PL.sector){ el.innerHTML="<div class='pcard-h'><span class='pstep'>2</span><h2>Typical for comparable programmes</h2></div><p class='pscope'>Choose an intervention / sector above to see what comparable programmes look like.</p>"; return; }
   const {rows,scope}=planCohort(); const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur");
   const resPct=rows.length?rows.filter(r=>r.re).length/rows.length:null;
   const mix={}; rows.forEach(r=>mix[r.d]=(mix[r.d]||0)+1);
   const mixTop=Object.entries(mix).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>esc(k)+" "+Math.round(100*v/rows.length)+"%").join(" · ");
   const provM={}; rows.forEach(r=>{ if(r.pcc) provM[r.pn]=(provM[r.pn]||0)+1; });
   const provTopStr=Object.entries(provM).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>esc(k)+" "+Math.round(100*v/rows.length)+"%").join(" · ");
+  const conc=concentration(rows), ach=cohortAch(rows);
   const med=b.med||0; const comp=rows.slice().sort((x,y)=>Math.abs((x._usd||0)-med)-Math.abs((y._usd||0)-med)).slice(0,5);
-  let h="<div class='pcard-h'><span class='pstep'>2</span><h2>Recommended benchmark</h2></div>";
-  h+="<p class='pscope'>Based on <b>"+rows.length+"</b> comparable programmes — "+esc(scope)+".</p>";
+  let h="<div class='pcard-h'><span class='pstep'>2</span><h2>Typical for comparable programmes</h2></div>";
+  h+="<p class='pscope'>What <b>"+rows.length+"</b> comparable programmes look like — "+esc(scope)+". <span class='pbasis'>figures in "+esc(usdBasisLabel())+"</span></p>";
+  h+="<p class='pnote-soft'>These are what similar programmes <b>cost</b>, not what yours <b>should</b>. Use them as context, then design to your own scope.</p>";
   if(rows.length<8) h+="<p class='pflag'>Thin sample — treat as indicative, or widen the need.</p>";
+  if(conc) h+="<p class='pflag'>"+esc(conc.msg)+"</p>";
   h+="<div class='prec'>"+
-    recStat("Median budget",fmtCompact(b.med),"typical "+fmtCompact(b.p25)+"–"+fmtCompact(b.p75))+
-    recStat("Typical duration",(d.med==null?"—":Math.round(d.med)+" mo"),"typical "+(d.p25==null?"—":Math.round(d.p25))+"–"+(d.p75==null?"—":Math.round(d.p75))+" mo")+
+    recStat("Median budget",fmtCompact(b.med),"middle 50%: "+fmtCompact(b.p25)+"–"+fmtCompact(b.p75))+
+    recStat("Typical duration",(d.med==null?"—":Math.round(d.med)+" mo"),"middle 50%: "+(d.p25==null?"—":Math.round(d.p25))+"–"+(d.p75==null?"—":Math.round(d.p75))+" mo")+
     recStat("Report results",fmtPct(resPct),rows.length+" programmes")+
     recStat("Common funders",mixTop||"—","by share of cohort")+
   "</div>";
   if(provTopStr) h+="<p class='pmix'>Typical providing countries: <b>"+provTopStr+"</b></p>";
+  if(ach) h+="<p class='pach'>Reality check: across <b>"+ach.n+"</b> comparable indicators with a target and an actual, the median actual was <b>"+Math.round(ach.med*100)+"%</b> of target; "+Math.round(ach.hit75*100)+"% reached ≥75%. <span class='muted'>IATI target/actual data is noisy — design to expected actuals, not nominal targets.</span></p>";
   h+="<div class='pcomp'><div class='pcomp-h'>Closest comparable programmes</div>"+comp.map(p=>
     "<div class='pcomp-row crow-click' data-i='"+p._i+"'><span class='pcn'>"+esc(p.n)+"</span><span class='pcm'>"+esc(p.co)+" · "+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+(p._dur==null?"—":p._dur+" mo")+" · <span class='rowmore'>open ›</span></span></div>").join("")+"</div>";
-  h+="<button id='pl-use' class='btn'>Use this benchmark to start a plan →</button>";
+  h+="<button id='pl-use' class='btn'>Use as a starting point →</button>";
   el.innerHTML=h;
   const u=document.getElementById("pl-use"); if(u) u.addEventListener("click",()=>seedPlan(b.med,d.med));
 }
@@ -276,55 +301,106 @@ function seedPlan(medBudget,medDur){
   const pw=document.getElementById("pl-planwrap"); if(pw&&pw.scrollIntoView) pw.scrollIntoView({behavior:"smooth",block:"start"});
 }
 function calcStat(k,v,s){ return "<div class='cs1'><div class='cs1-k'>"+esc(k)+"</div><div class='cs1-v'>"+v+"</div><div class='cs1-s'>"+esc(s)+"</div></div>"; }
-function strip(label,st,val,log){
+function strip(label,st,val,log,fmt){
   if(!st.n) return "";
-  const lo=st.min,hi=st.max;
+  fmt=fmt||fmtCompact; const lo=st.min,hi=st.max;
   function pos(v){ if(v==null) return null; if(log){ const a=Math.log(Math.max(1,lo)),bb=Math.log(Math.max(2,hi)),x=Math.log(Math.max(1,v)); return Math.max(0,Math.min(100,100*(x-a)/((bb-a)||1))); } return Math.max(0,Math.min(100,100*(v-lo)/((hi-lo)||1))); }
   const a=pos(st.p25),c=pos(st.p75),m=pos(st.med),mk=pos(val);
-  return "<div class='strip'><div class='strip-l'>"+esc(label)+"</div><div class='strip-bar'>"+
-    "<span class='strip-band' style='left:"+a+"%;width:"+Math.max(1,c-a)+"%'></span>"+
-    "<span class='strip-med' style='left:"+m+"%'></span>"+
-    (mk==null?"":"<span class='strip-mk' style='left:"+mk+"%'></span>")+
-    "</div></div>";
+  return "<div class='strip'><div class='strip-l'>"+esc(label)+"</div>"+
+    "<div class='strip-bar'>"+
+      "<span class='strip-band' style='left:"+a+"%;width:"+Math.max(1,c-a)+"%'></span>"+
+      "<span class='strip-med' style='left:"+m+"%'></span>"+
+      (mk==null?"":"<span class='strip-mk' style='left:"+mk+"%'></span>")+
+    "</div>"+
+    "<div class='strip-ax'><span>"+fmt(lo)+"</span><span class='strip-axm'>median "+fmt(st.med)+"</span><span>"+fmt(hi)+"</span></div>"+
+  "</div>";
 }
 function renderPlanCalc(){
   const el=document.getElementById("pl-calc"); if(!el) return;
-  const {rows}=planCohort(); const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur");
+  const {rows}=planCohort(); const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur"),bn=burnStats(rows);
   const budget=PL.budget,dur=PL.dur,target=PL.target;
   const burn=(budget&&dur)?budget/dur:null, cpp=(budget&&target)?budget/target:null;
-  const bp=pctRank(b.arr,budget), dp=pctRank(d.arr,dur);
+  const bp=pctRank(b.arr,budget), dp=pctRank(d.arr,dur), burnp=(burn!=null)?pctRank(bn.arr,burn):null;
+  const durFmt=v=>Math.round(v)+" mo", burnFmt=v=>fmtCompact(v)+"/mo";
   let h="<div class='pcalc'>"+
     calcStat("Monthly burn",burn==null?"—":fmtCompact(burn)+"/mo","budget ÷ duration")+
     calcStat("Cost / person",cpp==null?"—":"$"+nf.format(Math.round(cpp)),target?"your budget ÷ your target":"set a target")+
-    calcStat("Budget vs peers",bp==null?"—":Math.round(bp*100)+"th pct","of "+b.n+" comparables")+
-    calcStat("Duration vs peers",dp==null?"—":Math.round(dp*100)+"th pct","of comparables")+
+    calcStat("Budget vs peers",bp==null?"—":ord(Math.round(bp*100))+" pct","of "+b.n+" comparables")+
+    calcStat("Burn vs peers",burnp==null?"—":ord(Math.round(burnp*100))+" pct","of "+bn.n+" comparables")+
   "</div>";
-  h+="<div class='pstrip-wrap'>"+strip("Budget",b,budget,true)+strip("Duration",d,dur,false)+"</div>";
+  h+="<div class='pstrip-wrap'>"+strip("Budget",b,budget,true,fmtCompact)+strip("Duration",d,dur,false,durFmt)+strip("Monthly burn",bn,burn,true,burnFmt)+"</div>";
+  const reads=[];
+  if(budget!=null&&b.n) reads.push("Your budget of <b>"+fmtCompact(budget)+"</b> sits at the <b>"+ord(Math.round(bp*100))+" percentile</b> of "+b.n+" comparable programmes (their median is "+fmtCompact(b.med)+").");
+  if(dur!=null&&d.n) reads.push("Your <b>"+dur+"-month</b> duration is around the <b>"+ord(Math.round(dp*100))+" percentile</b> (middle 50% run "+Math.round(d.p25)+"–"+Math.round(d.p75)+" months).");
+  if(burn!=null&&bn.n) reads.push("Your spend rate of <b>"+fmtCompact(burn)+"/mo</b> is at the <b>"+ord(Math.round(burnp*100))+" percentile</b> of comparable programmes.");
+  if(reads.length) h+="<div class='preads'>"+reads.map(r=>"<p>"+r+"</p>").join("")+"</div>";
   const f=[];
-  if(budget!=null&&b.n>=8){ if(budget<b.p25) f.push("Budget is below the typical range ("+fmtCompact(b.p25)+"–"+fmtCompact(b.p75)+") for comparable programmes — consider trimming scope or duration."); else if(budget>b.p75) f.push("Budget is above the typical range ("+fmtCompact(b.p25)+"–"+fmtCompact(b.p75)+") — make sure scope justifies it."); }
-  if(dur!=null&&d.n>=8&&dur<d.p25) f.push("Duration is shorter than most comparable programmes ("+Math.round(d.p25)+"–"+Math.round(d.p75)+" mo).");
-  if(cpp!=null) f.push("Cost per person is your own figure (budget ÷ target). Comparable programmes rarely report reach, so there is no external benchmark — sense-check against sector unit-cost studies.");
+  if(budget!=null&&b.n>=8){ if(budget<b.p25) f.push("Budget is below the middle 50% ("+fmtCompact(b.p25)+"–"+fmtCompact(b.p75)+") of comparable programmes — trim scope/duration, or check you're not under-resourcing."); else if(budget>b.p75) f.push("Budget is above the middle 50% ("+fmtCompact(b.p25)+"–"+fmtCompact(b.p75)+") — make sure scope justifies it."); }
+  if(dur!=null&&d.n>=8){ if(dur<d.p25) f.push("Duration is shorter than most comparable programmes ("+Math.round(d.p25)+"–"+Math.round(d.p75)+" mo) — outcomes may need more time to land."); else if(dur>d.p75) f.push("Duration is longer than most comparable programmes ("+Math.round(d.p25)+"–"+Math.round(d.p75)+" mo) — long programmes can drift; check the case for the extra time."); }
+  if(burn!=null&&bn.n>=8){ if(burn>bn.p75) f.push("Monthly burn is high vs peers ("+fmtCompact(bn.p25)+"–"+fmtCompact(bn.p75)+"/mo) — an ambitious delivery pace; check absorption capacity."); else if(burn<bn.p25) f.push("Monthly burn is low vs peers ("+fmtCompact(bn.p25)+"–"+fmtCompact(bn.p75)+"/mo) — a long, thinly-resourced programme."); }
+  if(target!=null){ const ach=cohortAch(rows); if(ach) f.push("Comparable programmes reported a median actual of "+Math.round(ach.med*100)+"% of target ("+ach.n+" indicators); only "+Math.round(ach.hit100*100)+"% met target in full. Plan to expected actuals, not the nominal target."); }
+  if(cpp!=null) f.push("Cost per person is your own figure (budget ÷ target). Comparable programmes rarely report reach, so there's no external benchmark — sense-check against sector unit-cost studies.");
   if(f.length) h+="<ul class='pflags'>"+f.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>";
+  h+="<p class='pbasis2'>Budget &amp; burn figures in "+esc(usdBasisLabel())+" — switch nominal ↔ real in the sidebar.</p>";
   el.innerHTML=h; syncURL();
 }
-function exportPlan(){ const {rows,scope}=planCohort(); const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur");
+function exportPlan(){ const {rows,scope}=planCohort(); const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur"),bn=burnStats(rows);
+  const ach=cohortAch(rows), conc=concentration(rows);
   const L=[["field","value"].join(",")]; const add=(k,v)=>L.push([cc(k),cc(v)].join(","));
-  add("Country",PL.country||"Any"); add("Intervention / sector",PL.sector); add("Donor type",PL.donor||"Any");
+  add("USD basis",usdBasisLabel());
+  add("Country",PL.country||"Any"); add("Intervention / sector",PL.sector); add("Donor type",PL.donor||"Any"); add("Donor country",PL.prov||"Any");
   add("Cohort",scope); add("Comparable programmes (n)",rows.length);
-  add("Benchmark median budget USD",b.med?Math.round(b.med):""); add("Benchmark p25 USD",b.p25?Math.round(b.p25):""); add("Benchmark p75 USD",b.p75?Math.round(b.p75):"");
-  add("Benchmark median duration (mo)",d.med?Math.round(d.med):"");
+  if(conc) add("Concentration warning",conc.msg);
+  add("Typical median budget USD",b.med?Math.round(b.med):""); add("Typical p25 USD",b.p25?Math.round(b.p25):""); add("Typical p75 USD",b.p75?Math.round(b.p75):"");
+  add("Typical median duration (mo)",d.med?Math.round(d.med):"");
+  add("Typical median monthly burn USD",bn.med?Math.round(bn.med):"");
+  if(ach){ add("Comparators median actual % of target",Math.round(ach.med*100)); add("Comparators % meeting target",Math.round(ach.hit100*100)); add("Comparator indicators (n)",ach.n); }
   add("PLAN budget USD",PL.budget||""); add("PLAN duration (mo)",PL.dur||""); add("PLAN target reach",PL.target||"");
   add("PLAN monthly burn USD",(PL.budget&&PL.dur)?Math.round(PL.budget/PL.dur):""); add("PLAN cost per person USD",(PL.budget&&PL.target)?Math.round(PL.budget/PL.target):"");
+  if(PL.budget!=null) add("PLAN budget percentile",Math.round(pctRank(b.arr,PL.budget)*100));
   dl("programme_plan.csv",L.join("\n")); }
+function briefRow(k,v){ return "<tr><th>"+esc(k)+"</th><td>"+v+"</td></tr>"; }
+function briefCmp(k,med,iqr,you){ return "<tr><th>"+esc(k)+"</th><td>"+med+"</td><td>"+iqr+"</td><td>"+you+"</td></tr>"; }
+function buildPlanBrief(){
+  const el=document.getElementById("pl-brief"); if(!el) return;
+  const {rows,scope}=planCohort(); const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur"),bn=burnStats(rows);
+  const budget=PL.budget,dur=PL.dur,target=PL.target;
+  const burn=(budget&&dur)?budget/dur:null, cpp=(budget&&target)?budget/target:null;
+  const bp=pctRank(b.arr,budget), dp=pctRank(d.arr,dur), burnp=(burn!=null)?pctRank(bn.arr,burn):null;
+  const ach=cohortAch(rows), conc=concentration(rows);
+  let dt=""; try{ dt=new Date().toISOString().slice(0,10); }catch(e){ dt=(typeof META!=="undefined"?META.date:""); }
+  let h="<div class='brief'>";
+  h+="<header class='brief-h'><h1>Programme design brief</h1><div class='brief-meta'>"+esc(PL.sector)+(PL.country?" · "+esc(PL.country):"")+(PL.prov?" · funder "+esc(PL.prov):"")+(PL.donor?" · "+esc(PL.donor):"")+" · "+esc(dt)+"</div></header>";
+  h+="<h2>Your plan</h2><table class='brief-t'><tbody>"+
+    briefRow("Budget", budget!=null?fmtUSD(budget)+" <span class='brief-dim'>("+esc(usdBasisLabel())+")</span>":"—")+
+    briefRow("Duration", dur!=null?dur+" months":"—")+
+    briefRow("Target reach", target!=null?fmtNum(target)+" people":"—")+
+    briefRow("Monthly burn", burn!=null?fmtCompact(burn)+"/mo":"—")+
+    briefRow("Cost / person", cpp!=null?"$"+nf.format(Math.round(cpp)):"—")+
+  "</tbody></table>";
+  h+="<h2>How it compares</h2><p>Based on <b>"+rows.length+"</b> comparable programmes — "+esc(scope)+". These are what similar programmes <b>cost</b>, not what yours should — context, not a target.</p>";
+  h+="<table class='brief-t brief-cmp'><thead><tr><th></th><th>Typical (median)</th><th>Middle 50%</th><th>Your plan</th></tr></thead><tbody>"+
+    briefCmp("Budget", fmtCompact(b.med), fmtCompact(b.p25)+"–"+fmtCompact(b.p75), budget!=null?fmtCompact(budget)+" · "+ord(Math.round(bp*100))+" pct":"—")+
+    briefCmp("Duration", d.med==null?"—":Math.round(d.med)+" mo", (d.p25==null?"—":Math.round(d.p25)+"–"+Math.round(d.p75)+" mo"), dur!=null?dur+" mo · "+ord(Math.round(dp*100))+" pct":"—")+
+    briefCmp("Monthly burn", fmtCompact(bn.med)+"/mo", fmtCompact(bn.p25)+"–"+fmtCompact(bn.p75)+"/mo", burn!=null?fmtCompact(burn)+"/mo · "+ord(Math.round(burnp*100))+" pct":"—")+
+  "</tbody></table>";
+  if(conc) h+="<p class='brief-warn'>⚠ "+esc(conc.msg)+"</p>";
+  if(ach) h+="<p>Reality check: comparable programmes reported a median actual of <b>"+Math.round(ach.med*100)+"%</b> of target ("+ach.n+" indicators); "+Math.round(ach.hit100*100)+"% met target in full. Design to expected actuals.</p>";
+  h+="<footer class='brief-f'>Benchmark DB · IATI via d-portal · medians over an embedded sample in "+esc(usdBasisLabel())+" · indicative, not a census.</footer></div>";
+  el.innerHTML=h;
+}
 function wirePlan(){
   fillSelect("pl-country",ALL_COUNTRIES,"Any country");
   fillSelect("pl-sector",uniq(PROGRAMS,"sn"),"Select sector");
   fillSelect("pl-donor",DONORS.filter(d=>PROGRAMS.some(p=>p.d===d)),"Any donor type");
+  fillSelect("pl-prov",uniq(PROGRAMS.filter(p=>p.pcc),"pn"),"Any donor country");
   setVal("pl-sector",PL.sector);
   const on=(id,ev,fn)=>{const el=document.getElementById(id); if(el) el.addEventListener(ev,fn);};
   on("pl-country","change",e=>{PL.country=e.target.value;renderPlanRec();renderPlanCalc();});
   on("pl-sector","change",e=>{PL.sector=e.target.value;renderPlanRec();renderPlanCalc();});
   on("pl-donor","change",e=>{PL.donor=e.target.value;renderPlanRec();renderPlanCalc();});
+  on("pl-prov","change",e=>{PL.prov=e.target.value;renderPlanRec();renderPlanCalc();});
+  on("pl-print","click",()=>{ buildPlanBrief(); setTimeout(()=>{ try{ window.print(); }catch(e){} },30); });
   on("pl-need","input",e=>{PL.need=num(e.target.value);});
   on("pl-budget","input",e=>{const nb=num(e.target.value); if(PL.link&&PL.base&&PL.base.budget&&PL.base.target&&nb){PL.target=Math.round(PL.base.target*nb/PL.base.budget); setVal("pl-target",PL.target);} PL.budget=nb; renderPlanCalc();});
   on("pl-dur","input",e=>{PL.dur=num(e.target.value);renderPlanCalc();});
@@ -340,8 +416,9 @@ function initPlanFromURL(){
   const c=qp.get("country"); if(c){ const bn=PROGRAMS.find(p=>(p.co||"").toLowerCase()===c.toLowerCase()); const bi=PROGRAMS.find(p=>(p.cc||"").toLowerCase()===c.toLowerCase()); PL.country=bn?bn.co:(bi?bi.co:""); }
   const sc=qp.get("sector"); if(sc){ const bn=SECTORS.find(s=>s.toLowerCase()===sc.toLowerCase()); const bc=PROGRAMS.find(p=>p.sc===sc); PL.sector=bn||(bc?bc.sn:PL.sector); }
   const dn=qp.get("donor"); if(dn){ const m=DONORS.find(x=>x.toLowerCase()===dn.toLowerCase()); if(m) PL.donor=m; }
+  const pr=qp.get("provider"); if(pr){ const m=uniq(PROGRAMS.filter(p=>p.pcc),"pn").find(x=>x.toLowerCase()===pr.toLowerCase()); if(m) PL.prov=m; }
   const need=num(qp.get("target")||qp.get("people")); if(need) PL.need=need;
-  setVal("pl-country",PL.country); setVal("pl-sector",PL.sector); setVal("pl-donor",PL.donor); if(PL.need) setVal("pl-need",PL.need);
+  setVal("pl-country",PL.country); setVal("pl-sector",PL.sector); setVal("pl-donor",PL.donor); setVal("pl-prov",PL.prov); if(PL.need) setVal("pl-need",PL.need);
   renderPlanRec();
   const {rows}=planCohort(); const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur");
   seedPlan(num(qp.get("budget"))||b.med, num(qp.get("duration"))||d.med);
@@ -459,7 +536,7 @@ function syncURL(){
   } else if(CURRENT_VIEW==="compare"){
     qp.set("dim",CMP.dim); const it=CMP.items.filter(Boolean); if(it.length)qp.set("vs",it.join("~"));
   } else if(CURRENT_VIEW==="plan"){
-    if(PL.country)qp.set("country",PL.country); if(PL.sector)qp.set("sector",PL.sector); if(PL.donor)qp.set("donor",PL.donor);
+    if(PL.country)qp.set("country",PL.country); if(PL.sector)qp.set("sector",PL.sector); if(PL.donor)qp.set("donor",PL.donor); if(PL.prov)qp.set("provider",PL.prov);
     if(PL.budget!=null)qp.set("budget",PL.budget); if(PL.dur!=null)qp.set("duration",PL.dur); if(PL.target!=null)qp.set("target",PL.target);
   }
   const qs=qp.toString();

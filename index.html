@@ -93,6 +93,7 @@
      <label>Country<select id="pl-country"></select></label>
      <label>Intervention / sector<select id="pl-sector"></select></label>
      <label>Donor type<select id="pl-donor"></select></label>
+     <label>Donor country<select id="pl-prov"></select></label>
      <label>People to reach<input id="pl-need" type="number" min="0" placeholder="from needs analysis"></label>
     </div>
     <p class="phint">Your country profile can deep-link straight into this planner via URL parameters &mdash; e.g. <code>?country=KE&amp;sector=12220&amp;target=50000&amp;budget=5000000</code> opens it pre-filled.</p>
@@ -100,7 +101,8 @@
    <div class="pcard" id="pl-rec"></div>
    <div class="pcard" id="pl-planwrap">
     <div class="pcard-h"><span class="pstep">3</span><h2>Your programme plan</h2>
-     <div class="tb-actions"><button id="pl-reset" class="btn ghost">Reset to benchmark</button><button id="pl-export" class="btn">&#8595; Export plan</button></div></div>
+     <div class="tb-actions"><button id="pl-reset" class="btn ghost">Reset to typical</button><button id="pl-print" class="btn ghost">⎙ Print brief</button><button id="pl-export" class="btn">&#8595; Export plan</button></div></div>
+    <p class="phint">Seeded from typical comparable programmes — a <b>starting point, not a recommendation</b>. Adjust every field to your own design.</p>
     <div class="pgrid">
      <label>Budget (&asymp; USD)<input id="pl-budget" type="number" min="0"></label>
      <label>Duration (months)<input id="pl-dur" type="number" min="0"></label>
@@ -162,6 +164,7 @@
 
 <div id="cardModal" class="cmodal" hidden><div class="cmodal-bg" data-close="1"></div><div class="cmodal-card" role="dialog" aria-modal="true"><button class="cmodal-x" data-close="1" aria-label="Close">×</button><div id="cardBody"></div></div></div>
 </main></div>
+<div id="pl-brief" class="pl-brief" aria-hidden="true"></div>
 <script src="js/lib.js"></script>
 <script src="js/data.js"></script>
 <script src="js/app.js"></script>

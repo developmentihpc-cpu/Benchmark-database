@@ -123,8 +123,12 @@ npm test          # alias for: node --test
   donors, recent programmes) with jump-offs to the filtered grid or the planner.
 - **Compare** — put 2–4 countries, sectors, donor types or regions side by side
   (medians, ranges, reporting rates), with the highest value per row highlighted.
-- **Plan a programme** — pick a need, get a benchmark from comparable programmes,
-  then adjust the plan to fit a budget.
+- **Plan a programme** — scope by sector, country, donor type and **donor
+  country**, see what comparable programmes *typically cost* (framed as context,
+  not a target), then pressure-test your plan: budget/duration/burn percentile
+  strips, plain-language reads, symmetric feasibility flags, a concentration
+  warning when the cohort is narrow, an outcome reality-check (median actual vs
+  target), and a printable one-page **design brief**.
 - **Reported outcomes** — indicator-level baseline → target → actual values.
 - **#read_me** — full method, provenance, caveats, and a live **data-quality /
   coverage** panel (how complete each field is across the sample). The ≈USD
