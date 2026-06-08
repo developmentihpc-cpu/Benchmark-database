@@ -509,12 +509,11 @@ function showView(name){
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("show",v.id==="view-"+name));
   document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===name));
   if(name==="charts") renderCharts();
-  if(name==="compare") renderCompare();
   syncURL();
 }
 function setTheme(t){ document.documentElement.setAttribute("data-theme",t);
   document.querySelectorAll(".theme-btn").forEach(b=>b.classList.toggle("on",b.dataset.theme===t)); }
-function setBasis(x){ BASIS=x; document.querySelectorAll(".basis-btn").forEach(b=>b.classList.toggle("on",b.dataset.basis===x)); recomputeUSD(); renderPrograms(); renderBenchmarks(); renderCharts(); renderCountry(); renderCompare(); if(typeof renderPlanRec==="function"){renderPlanRec();renderPlanCalc();} }
+function setBasis(x){ BASIS=x; document.querySelectorAll(".basis-btn").forEach(b=>b.classList.toggle("on",b.dataset.basis===x)); recomputeUSD(); renderPrograms(); renderBenchmarks(); renderCharts(); renderCountry(); if(typeof renderPlanRec==="function"){renderPlanRec();renderPlanCalc();} }
 
 /* ---------- shareable URL state ---------- */
 let CURRENT_VIEW="programmes", URL_READY=false;
@@ -527,7 +526,6 @@ function reflectControls(){
   set("opgsize",OS.size>=1e9?"all":String(OS.size));
   if(CY.country) set("cy-pick",CY.country);
   set("ch-sector",CS.sc); set("ch-region",CS.rg); set("ch-donor",CS.d);
-  set("cmp-dim",CMP.dim); fillCmpEntities();
 }
 function syncURL(){
   if(!URL_READY) return;
@@ -547,8 +545,6 @@ function syncURL(){
     if(CY.country)qp.set("country",CY.country);
   } else if(CURRENT_VIEW==="charts"){
     if(CS.sc)qp.set("sector",CS.sc); if(CS.rg)qp.set("region",CS.rg); if(CS.d)qp.set("donor",CS.d);
-  } else if(CURRENT_VIEW==="compare"){
-    qp.set("dim",CMP.dim); const it=CMP.items.filter(Boolean); if(it.length)qp.set("vs",it.join("~"));
   } else if(CURRENT_VIEW==="plan"){
     if(PL.country)qp.set("country",PL.country); if(PL.sector)qp.set("sector",PL.sector); if(PL.donor)qp.set("donor",PL.donor); if(PL.prov)qp.set("provider",PL.prov);
     if(PL.budget!=null)qp.set("budget",PL.budget); if(PL.dur!=null)qp.set("duration",PL.dur); if(PL.target!=null)qp.set("target",PL.target);
@@ -570,8 +566,6 @@ function route(){
     CY.country=qp.get("country")||"";
   } else if(view==="charts"){
     CS.sc=qp.get("sector")||""; CS.rg=qp.get("region")||""; CS.d=qp.get("donor")||"";
-  } else if(view==="compare"){
-    if(qp.get("dim")) CMP.dim=qp.get("dim"); const vs=qp.get("vs"); if(vs){ CMP.items=vs.split("~").slice(0,4); while(CMP.items.length<4)CMP.items.push(""); }
   } else if(!view||view==="programmes"){
     PS.q=qp.get("q")||""; PS.d=qp.get("donor")||""; PS.rg=qp.get("region")||""; PS.co=qp.get("country")||"";
     PS.sc=qp.get("sector")||""; PS.sta=qp.get("status")||""; PS.re=qp.get("results")||""; PS.prov=qp.get("provider")||"";
@@ -580,7 +574,7 @@ function route(){
   }
   reflectControls();
   renderPrograms(); renderOutcomes(); renderCountry();
-  showView(view||"programmes");
+  showView((view&&document.getElementById("view-"+view))?view:"programmes");
 }
 
 /* ---------- Charts (zero-dependency SVG) ---------- */
@@ -674,47 +668,6 @@ function renderCountry(){
   syncURL();
 }
 
-/* ---------- Compare ---------- */
-const CMP_DIMS=[
-  {k:"co",label:"Country",vals:()=>uniq(PROGRAMS,"co")},
-  {k:"sn",label:"Sector",vals:()=>uniq(PROGRAMS,"sn")},
-  {k:"d",label:"Donor type",vals:()=>DONORS.filter(d=>PROGRAMS.some(p=>p.d===d))},
-  {k:"rg",label:"Region",vals:()=>REGIONS.filter(r=>PROGRAMS.some(p=>p.rg===r))}
-];
-const CMP={dim:"sn",items:["Primary education","Agricultural development","Basic health care",""]};
-function cmpDimLabel(k){ const d=CMP_DIMS.find(x=>x.k===k); return d?d.label:k; }
-function cmpDimVals(k){ const d=CMP_DIMS.find(x=>x.k===k); return d?d.vals():[]; }
-function cmpTop(rows,key){ const m={}; rows.forEach(r=>{const v=r[key]; if(v)m[v]=(m[v]||0)+1;}); const e=Object.entries(m).sort((a,b)=>b[1]-a[1])[0]; return (e&&rows.length)?esc(e[0])+" <span class='muted'>"+Math.round(100*e[1]/rows.length)+"%</span>":"—"; }
-function cmpMetrics(rows){ const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur");
-  return { n:rows.length, medB:b.med, p25:b.p25, p75:b.p75, medD:d.med,
-    res:rows.length?rows.filter(r=>r.re).length/rows.length:null,
-    reach:rows.length?rows.filter(r=>r.rc!=null&&r.rc!=="").length/rows.length:null, rows }; }
-function fillCmpEntities(){ const vals=cmpDimVals(CMP.dim); for(let i=0;i<4;i++){ fillSelect("cmp-"+i,vals,i<1?"Select…":"+ add"); setVal("cmp-"+i,CMP.items[i]||""); } }
-function renderCompare(){
-  const el=document.getElementById("compare"); if(!el) return; const f=CMP.dim;
-  const items=CMP.items.filter((v,i,a)=>v&&a.indexOf(v)===i);
-  if(!items.length){ el.innerHTML="<div class='cprompt'>Pick at least one "+esc(cmpDimLabel(f).toLowerCase())+" above to compare.</div>"; syncURL(); return; }
-  const cols=items.map(v=>({v,m:cmpMetrics(PROGRAMS.filter(p=>p[f]===v))}));
-  const maxB=Math.max(1,...cols.map(c=>c.m.medB||0));
-  const best=(arr,hi)=>{ let bi=-1,bv=hi?-Infinity:Infinity; arr.forEach((x,i)=>{ if(x==null)return; if(hi?x>bv:x<bv){bv=x;bi=i;} }); return bi; };
-  function bcell(m){ if(m.medB==null) return "<span class='muted'>—</span>"; const w=Math.max(4,Math.round(100*m.medB/maxB)); return "<span class='cmp-bar'><span style='width:"+w+"%'></span></span><span class='cmp-bv'>"+fmtCompact(m.medB)+"</span>"; }
-  const defs=[
-    {k:"Programmes", v:m=>fmtNum(m.n), pick:cols.map(c=>c.m.n), hi:true},
-    {k:"Median budget", v:m=>bcell(m), pick:cols.map(c=>c.m.medB), hi:true},
-    {k:"Typical range (p25–p75)", v:m=>m.p25==null?"—":fmtCompact(m.p25)+" – "+fmtCompact(m.p75)},
-    {k:"Median duration", v:m=>m.medD==null?"—":Math.round(m.medD)+" mo"},
-    {k:"Report results", v:m=>fmtPct(m.res), pick:cols.map(c=>c.m.res), hi:true},
-    {k:"Report reach", v:m=>fmtPct(m.reach)}
-  ];
-  if(f!=="sn") defs.push({k:"Top sector", v:m=>cmpTop(m.rows,"sn")});
-  if(f!=="d") defs.push({k:"Top donor type", v:m=>cmpTop(m.rows,"d")});
-  if(f!=="rg"&&f!=="co") defs.push({k:"Top region", v:m=>cmpTop(m.rows,"rg")});
-  let h="<div class='cmp-wrap'><table class='cmp-table'><thead><tr><th class='cmp-corner'>"+esc(cmpDimLabel(f))+"</th>"+cols.map(c=>"<th>"+esc(c.v)+"</th>").join("")+"</tr></thead><tbody>";
-  defs.forEach(d=>{ const bi=d.pick?best(d.pick,d.hi):-1;
-    h+="<tr><td class='cmp-k'>"+esc(d.k)+"</td>"+cols.map((c,i)=>"<td"+(i===bi?" class='cmp-best'":"")+">"+d.v(c.m)+"</td>").join("")+"</tr>"; });
-  h+="</tbody></table><p class='cmp-note'>Highlighted = highest in that row. Medians over the embedded sample; budgets in "+(BASIS==="real"?"real 2024":"nominal")+" USD.</p></div>";
-  el.innerHTML=h; syncURL();
-}
 
 function init(){
   fillSelect("f-donor",DONORS.filter(d=>PROGRAMS.some(p=>p.d===d)),"All donor types");
@@ -730,8 +683,6 @@ function init(){
   fillSelect("ch-sector",uniq(PROGRAMS,"sn"),"All sectors");
   fillSelect("ch-region",REGIONS.filter(r=>PROGRAMS.some(p=>p.rg===r)),"All regions");
   fillSelect("ch-donor",DONORS.filter(d=>PROGRAMS.some(p=>p.d===d)),"All donor types");
-  const _dimSel=document.getElementById("cmp-dim"); if(_dimSel){ _dimSel.innerHTML=CMP_DIMS.map(d=>"<option value='"+d.k+"'>By "+esc(d.label)+"</option>").join(""); _dimSel.value=CMP.dim; }
-  fillCmpEntities();
   setText("badge-prog",nf.format(PROGRAMS.length));
   setText("badge-out",nf.format(OUTCOMES.length));
 
@@ -764,8 +715,6 @@ function init(){
   on("ch-sector","change",e=>{CS.sc=e.target.value;renderCharts();syncURL();});
   on("ch-region","change",e=>{CS.rg=e.target.value;renderCharts();syncURL();});
   on("ch-donor","change",e=>{CS.d=e.target.value;renderCharts();syncURL();});
-  on("cmp-dim","change",e=>{CMP.dim=e.target.value;CMP.items=["","","",""];fillCmpEntities();renderCompare();});
-  for(let i=0;i<4;i++){ const idx=i; on("cmp-"+i,"change",e=>{CMP.items[idx]=e.target.value;renderCompare();}); }
 
   const phEl=document.getElementById("ph"); if(phEl) phEl.addEventListener("click",e=>{const th=e.target.closest("th");if(!th||th.classList.contains("nosort"))return;const k=th.dataset.key;if(!k)return;if(PS.sort===k)PS.dir*=-1;else{PS.sort=k;PS.dir=PSTR.split(" ").includes(k)?1:-1;}renderPrograms();});
   const ohEl=document.getElementById("oh"); if(ohEl) ohEl.addEventListener("click",e=>{const th=e.target.closest("th");if(!th)return;const k=th.dataset.key;if(!k)return;if(OS.sort===k)OS.dir*=-1;else{OS.sort=k;OS.dir=("n i s sn t".split(" ").includes(k))?1:-1;}renderOutcomes();});
@@ -793,7 +742,7 @@ function init(){
   const _ob=document.getElementById("ob"); if(_ob) _ob.addEventListener("click",e=>{ const tr=e.target.closest&&e.target.closest("tr.crow-click"); if(tr) openCard(PROGRAMS[+tr.getAttribute("data-i")]); });
   const _rec=document.getElementById("pl-rec"); if(_rec) _rec.addEventListener("click",e=>{ const row=e.target.closest&&e.target.closest(".pcomp-row[data-i]"); if(row) openCard(PROGRAMS[+row.getAttribute("data-i")]); });
 
-  setTheme("light"); buildFX(); renderDQ(); renderBenchmarks(); renderCharts(); renderCountry(); renderCompare(); renderPrograms(); renderOutcomes(); wirePlan();
+  setTheme("light"); buildFX(); renderDQ(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
   route(); URL_READY=true; syncURL();
 }
 document.addEventListener("DOMContentLoaded",init);
