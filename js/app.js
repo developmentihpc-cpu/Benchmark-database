@@ -141,10 +141,11 @@ function renderOutcomes(){
 
 function groupStats(fn){ const r=PROGRAMS.filter(fn); return {n:r.length,mb:median(r.map(x=>x._usd)),md:median(r.map(x=>x._dur)),
   pr:r.length?r.filter(x=>x.re).length/r.length:null}; }
-function btable(title,sub,specs,labelHdr,showTotal,showDot){
+function btable(title,sub,desc,specs,labelHdr,showTotal,showDot){
   const stats=specs.map(s=>{const g=groupStats(s.fn); return {lab:s.lab,total:s.total,n:g.n,mb:g.mb,md:g.md,pr:g.pr};});
   const maxB=Math.max(1,...stats.map(s=>s.mb||0));
   let h="<div class='btable'><div class='bt-cap'><span>"+esc(title)+"</span><em>"+esc(sub)+"</em></div>"+
+   (desc?"<p class='bt-desc'>"+esc(desc)+"</p>":"")+
    "<table class='grid'><thead><tr><th>"+esc(labelHdr)+"</th><th class='c-num'>n</th>"+
    "<th class='c-num'>Median budget &asymp;USD</th><th class='c-num'>Median dur (mo)</th><th class='c-num'>% results</th>"+
    (showTotal?"<th class='c-num'>In IATI</th>":"")+"</tr></thead><tbody>";
@@ -167,11 +168,16 @@ function renderBenchmarks(){
   const provTop=Object.keys(provCount).sort((x,y)=>provCount[y]-provCount[x]).slice(0,12);
   const prov=provTop.map(pn=>({lab:pn,fn:p=>p.pn===pn}));
   el.innerHTML=
-    btable("A \u00b7 Bilateral programmes by sector","donor type = Bilateral — your headline benchmark",bilat,"Sector",true,false)+
-    btable("B \u00b7 All programmes by sector","any donor type",all,"Sector",true,false)+
-    btable("C \u00b7 By donor type","across all sectors & regions",don,"Donor type",false,true)+
-    btable("D \u00b7 By region","across all sectors & donors",reg,"Region",false,false)+
-    btable("E \u00b7 By providing country","inferred funder country \u2014 bilateral & co-funded; top 12 by count",prov,"Providing country",false,false)+
+    btable("A \u00b7 Bilateral programmes by sector","donor type = Bilateral — your headline benchmark","Median budget, duration and reporting rate for programmes funded by a single government (bilateral) — the closest comparator for a typical donor grant. Start your scope from the median budget; the bar shows it against the other sectors.",
+      bilat,"Sector",true,false)+
+    btable("B \u00b7 All programmes by sector","any donor type","The same metrics with every donor type pooled. Usually larger than A because it includes multilateral facilities, so read it for the full per-sector spread rather than a single grant.",
+      all,"Sector",true,false)+
+    btable("C \u00b7 By donor type","across all sectors & regions","How typical scale and reporting differ by funder type, across all sectors and regions — multilaterals generally run larger, longer programmes than NGOs or foundations.",
+      don,"Donor type",false,true)+
+    btable("D \u00b7 By region","across all sectors & donors","Typical scale and reporting by world region, across all sectors and donors — context for where a programme sits geographically.",
+      reg,"Region",false,false)+
+    btable("E \u00b7 By providing country","inferred funder country \u2014 bilateral & co-funded; top 12 by count","Indicative typical programme size per funding government, for bilateral and co-funded programmes (top 12 by count). Provider country is inferred from the funder/reporter, so treat as approximate.",
+      prov,"Providing country",false,false)+
     "<p class='bnote'>Computed live over the "+nf.format(PROGRAMS.length)+" embedded programmes (a global sample; the recent IATI universe per sector is larger — see the 'In IATI' column and #read_me). Bars scale to the largest median in each table. <b>Cost-per-beneficiary and aggregate achievement are intentionally absent</b> — IATI reach and target/actual fields are non-comparable.</p>";
 }
 
@@ -344,6 +350,22 @@ function initPlanFromURL(){
 }
 
 /* ---------- programme detail card ---------- */
+function progDesc(p){
+  const sec=(p.sn||"").toLowerCase();
+  let s1=(p.d?p.d+" ":"")+(sec?sec+" ":"")+"programme in "+(p.co||"an unspecified country")+(p.multi?" and other countries":"")+(p.rg?" ("+p.rg+")":"")+".";
+  s1=s1.charAt(0).toUpperCase()+s1.slice(1);
+  const funder=p.fn||p.r;
+  let s2=funder?("Funded by "+funder+(p.d==="Bilateral"&&p.pn?" ("+p.pn+")":"")+", with "):"With ";
+  s2+="a reported budget of "+(p.c?p.c+" ":"")+nf.format(Math.round(p.a))+(p._usd!=null?" (≈"+fmtCompact(p._usd)+(BASIS==="real"?" real ’24":"")+")":"");
+  if(p.st&&p.en) s2+=", running "+p.st+" to "+p.en+(p._dur!=null?" ("+p._dur+" months)":"");
+  else if(p._dur!=null) s2+=", over about "+p._dur+" months";
+  s2+=".";
+  const sw={Ongoing:"Currently ongoing",Planned:"Planned / pipeline",Finalisation:"In finalisation",Closed:"Completed",Suspended:"Suspended",Cancelled:"Cancelled"}[p.sta];
+  let s3=(sw?sw+". ":"")+(p.re?"Reports indicator results":"No indicator results reported");
+  if(p.rc!=null&&p.rc!=="") s3+="; reported reach "+nf.format(p.rc)+(p.rb?" — "+p.rb:"");
+  s3+=".";
+  return s1+" "+s2+" "+s3;
+}
 function eatt(s){ return esc(s); }
 function cf(k,v){ return "<div class='cfield'><span class='ck'>"+k+"</span><span class='cv'>"+v+"</span></div>"; }
 function cfBig(k,v){ return "<div class='cfield'><span class='ck'>"+k+"</span><span class='cv big'>"+v+"</span></div>"; }
@@ -357,6 +379,7 @@ function openCard(p){ if(!p) return;
   const dpRaw="https://d-portal.org/q.html?aid="+encodeURIComponent(p.id);
   const os=OUTCOMES.filter(o=>o.n===p.n);
   let h="<div class='cardh'><h2>"+esc(p.n)+"</h2><div class='sub'>"+statusPill(p.sta)+chip(p.d)+"<span>"+esc(p.sn)+"</span><span class='muted'>· "+esc(p.s)+"</span>"+((p.d==="Bilateral"&&p.pcc)?"<span class='flow'>"+esc(p.pcc)+" → "+esc(p.cc)+"</span>":"")+"</div></div>";
+  h+="<div class='cardsec cabout-sec'><p class='cabout'>"+esc(progDesc(p))+"</p><span class='tagmini'>derived — generated from this activity’s reported fields</span></div>";
   h+="<div class='cardsec'><div class='cardgrid'>"+cf("Receiving country",esc(p.co)+(p.multi?" <span class='muted'>(+ others)</span>":""))+((p.d==="Bilateral")?cf("Providing country",(p.pn?esc(p.pn)+" <span class='muted'>("+esc(p.pcc)+", inferred)</span>":"—")):"")+cf("Funder",esc(p.fn||p.r||"—"))+cf("Region",esc(p.rg))+cf("Reporting org",esc(p.r)+" <span class='muted'>("+esc(p.rt||"—")+")</span>")+cf("Sector code",esc(p.sc))+"</div></div>";
   h+="<div class='cardsec'><h3>Finance &amp; timeline</h3><div class='cardgrid'>"+cfBig("Budget",esc(p.c)+" "+nf.format(Math.round(p.a)))+cfBig(BASIS==="real"?"≈ real 2024 USD":"≈ nominal USD",fmtUSD(p._usd))+cf("FX applied",esc(fxNote(p)))+cf("Reported as",esc(p.b||"—"))+cf("Start",esc(p.st||"—"))+cf("End",esc(p.en||"—"))+cf("Duration",(p._dur==null?"—":p._dur+" months"))+"</div></div>";
   let rr=cf("Reach (reported)",(p.rc===""||p.rc==null)?"—":fmtNum(p.rc));

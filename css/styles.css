@@ -164,6 +164,7 @@ a[target]{color:var(--accent-ink);font-weight:500}
 .bt-cap{display:flex;align-items:baseline;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
 .bt-cap span{font-family:var(--serif);font-weight:600;font-size:16px}
 .bt-cap em{font-style:normal;color:var(--text2);font-size:12px}
+.bt-desc{margin:0;padding:12px 18px;color:var(--text2);font-size:12.5px;line-height:1.55;border-bottom:1px solid var(--line)}
 .btable .grid{min-width:0}
 .btable .grid thead th{position:static;background:var(--panel2)}
 .b-lab{font-weight:600;display:flex;align-items:center;gap:8px;min-width:200px}
@@ -230,6 +231,9 @@ tr.crow-click:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent
 .cardsec{padding:15px 22px;border-bottom:1px solid var(--line)}
 .cardsec:last-child{border-bottom:0}
 .cardsec h3{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text2);margin:0 0 11px}
+.cabout-sec{background:var(--panel2)}
+.cabout{margin:0;font-size:13.5px;line-height:1.55;color:var(--text)}
+.tagmini{display:inline-block;margin-top:9px;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
 .cardgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:13px}
 .cfield{display:flex;flex-direction:column;gap:3px;min-width:0}
 .cfield .ck{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
