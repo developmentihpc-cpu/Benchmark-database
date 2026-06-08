@@ -225,6 +225,11 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background
 .strip{display:grid;grid-template-columns:78px 1fr;column-gap:12px;row-gap:5px;align-items:center}
 .strip-l{grid-row:1/3;align-self:center;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--text2)}
 .strip-bar{grid-column:2;position:relative;height:8px;background:var(--panel2);border:1px solid var(--line);border-radius:6px}
+.strip-bar.strip-drag{height:10px;cursor:pointer;touch-action:none}
+.strip-bar.strip-drag::before{content:"";position:absolute;left:0;right:0;top:-7px;bottom:-7px}
+.strip-drag .strip-mk{cursor:grab;width:13px;height:22px;top:-7px}
+.strip-drag:active .strip-mk{cursor:grabbing}
+.strip-drag-hint{font-size:8.5px;letter-spacing:.04em;color:var(--accent-ink);background:var(--side-active-bg);border-radius:4px;padding:1px 5px;margin-left:5px;text-transform:none}
 .strip-ax{grid-column:2;display:flex;justify-content:space-between;font-size:10px;color:var(--faint);font-variant-numeric:tabular-nums}
 .strip-axm{color:var(--text2)}
 .strip-band{position:absolute;top:-1px;bottom:-1px;background:color-mix(in srgb,var(--accent) 22%,transparent);border-radius:6px}

@@ -323,13 +323,17 @@ function seedFromProject(p){
   renderPlanCalc(); scrollToPlan();
 }
 function calcStat(k,v,s){ return "<div class='cs1'><div class='cs1-k'>"+esc(k)+"</div><div class='cs1-v'>"+v+"</div><div class='cs1-s'>"+esc(s)+"</div></div>"; }
-function strip(label,st,val,log,fmt){
+function stripValueFromFrac(f,lo,hi,log){ f=Math.max(0,Math.min(1,f));
+  if(log){ const a=Math.log(Math.max(1,lo)),bb=Math.log(Math.max(2,hi)); return Math.exp(a+f*(bb-a)); }
+  return lo+f*(hi-lo); }
+function strip(label,st,val,log,fmt,metric){
   if(!st.n) return "";
   fmt=fmt||fmtCompact; const lo=st.min,hi=st.max;
   function pos(v){ if(v==null) return null; if(log){ const a=Math.log(Math.max(1,lo)),bb=Math.log(Math.max(2,hi)),x=Math.log(Math.max(1,v)); return Math.max(0,Math.min(100,100*(x-a)/((bb-a)||1))); } return Math.max(0,Math.min(100,100*(v-lo)/((hi-lo)||1))); }
   const a=pos(st.p25),c=pos(st.p75),m=pos(st.med),mk=pos(val);
-  return "<div class='strip'><div class='strip-l'>"+esc(label)+"</div>"+
-    "<div class='strip-bar'>"+
+  const dragAttr=metric?(" strip-drag' data-metric='"+metric+"' data-lo='"+lo+"' data-hi='"+hi+"' data-log='"+(log?1:0)+"'"):"'";
+  return "<div class='strip'><div class='strip-l'>"+esc(label)+(metric?" <span class='strip-drag-hint'>drag</span>":"")+"</div>"+
+    "<div class='strip-bar"+dragAttr+">"+
       "<span class='strip-band' style='left:"+a+"%;width:"+Math.max(1,c-a)+"%'></span>"+
       "<span class='strip-med' style='left:"+m+"%'></span>"+
       (mk==null?"":"<span class='strip-mk' style='left:"+mk+"%'></span>")+
@@ -351,7 +355,7 @@ function renderPlanCalc(){
     calcStat("Budget vs peers",bp==null?"—":ord(Math.round(bp*100))+" pct","of "+b.n+" comparables")+
     calcStat("Burn vs peers",burnp==null?"—":ord(Math.round(burnp*100))+" pct","of "+bn.n+" comparables")+
   "</div>";
-  h+="<div class='pstrip-wrap'>"+strip("Budget",b,budget,true,fmtCompact)+strip("Duration",d,dur,false,durFmt)+strip("Monthly burn",bn,burn,true,burnFmt)+"</div>";
+  h+="<div class='pstrip-wrap'>"+strip("Budget",b,budget,true,fmtCompact,"budget")+strip("Duration",d,dur,false,durFmt,"dur")+strip("Monthly burn",bn,burn,true,burnFmt)+"</div>";
   const reads=[];
   if(budget!=null&&b.n) reads.push("Your budget of <b>"+fmtCompact(budget)+"</b> sits at the <b>"+ord(Math.round(bp*100))+" percentile</b> of "+b.n+" comparable programmes (their median is "+fmtCompact(b.med)+").");
   if(dur!=null&&d.n) reads.push("Your <b>"+dur+"-month</b> duration is around the <b>"+ord(Math.round(dp*100))+" percentile</b> (middle 50% run "+Math.round(d.p25)+"–"+Math.round(d.p75)+" months).");
@@ -459,6 +463,17 @@ function wirePlan(){
   on("pl-dur","input",e=>{PL.dur=num(e.target.value);renderPlanCalc();});
   on("pl-target","input",e=>{PL.target=num(e.target.value); PL.base={budget:PL.budget,target:PL.target}; renderPlanCalc();});
   on("pl-link","change",e=>{PL.link=e.target.checked; PL.base={budget:PL.budget,target:PL.target};});
+  let _drag=null;
+  const stripMove=ev=>{ if(!_drag) return; const r=_drag.bar.getBoundingClientRect(); const f=(ev.clientX-r.left)/(r.width||1);
+    let v=Math.max(0,Math.round(stripValueFromFrac(f,_drag.lo,_drag.hi,_drag.log)));
+    if(_drag.metric==="budget"){ if(PL.link&&PL.base&&PL.base.budget&&PL.base.target&&v){PL.target=Math.round(PL.base.target*v/PL.base.budget);setVal("pl-target",PL.target);} PL.budget=v; setVal("pl-budget",v); }
+    else { PL.dur=v; setVal("pl-dur",v); }
+    let mk=_drag.bar.querySelector(".strip-mk"); if(!mk){ mk=document.createElement("span"); mk.className="strip-mk"; _drag.bar.appendChild(mk); }
+    mk.style.left=(Math.max(0,Math.min(1,f))*100)+"%"; };
+  const stripUp=()=>{ if(_drag){ _drag=null; document.removeEventListener("pointermove",stripMove); document.removeEventListener("pointerup",stripUp); renderPlanCalc(); } };
+  on("pl-calc","pointerdown",ev=>{ const bar=ev.target.closest&&ev.target.closest(".strip-bar.strip-drag"); if(!bar) return; ev.preventDefault();
+    _drag={bar:bar,metric:bar.getAttribute("data-metric"),lo:+bar.getAttribute("data-lo"),hi:+bar.getAttribute("data-hi"),log:bar.getAttribute("data-log")==="1"};
+    document.addEventListener("pointermove",stripMove); document.addEventListener("pointerup",stripUp); stripMove(ev); });
   on("pl-reset","click",()=>{const {rows}=planCohort(); const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur"); seedPlan(b.med,d.med,"cohort median");});
   on("pl-add","click",addToBasket);
   const _bk=document.getElementById("pl-basket"); if(_bk) _bk.addEventListener("click",e=>{
