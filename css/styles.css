@@ -98,6 +98,25 @@ input,select{font-family:var(--sans);font-size:13px;color:var(--text);background
 input::placeholder{color:var(--faint)}
 input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
 select{cursor:pointer}
+/* filters / sort / chips */
+.ctrl-btn{display:inline-flex;align-items:center;gap:7px;font:600 12.5px var(--sans);cursor:pointer;background:var(--panel);color:var(--text);border:1px solid var(--line2);padding:9px 14px;border-radius:10px;white-space:nowrap}
+.ctrl-btn:hover{border-color:var(--text2)}
+.ctrl-btn.on{border-color:color-mix(in srgb,var(--accent) 55%,var(--line2))}
+.ctrl-btn .cbico{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.ctrl-count{display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--text);color:var(--panel);font-size:10.5px;font-variant-numeric:tabular-nums}
+.filters-panel{display:flex;flex-wrap:wrap;gap:9px;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px;margin:-4px 0 12px}
+.filters-panel select{flex:1 1 160px;min-width:150px}
+.sort-menu{display:flex;flex-direction:column;gap:2px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:6px;margin:-4px 0 12px;max-width:260px}
+.sort-item{text-align:left;background:none;border:0;cursor:pointer;font:13px var(--sans);color:var(--text);padding:8px 11px;border-radius:8px;display:flex;justify-content:space-between;gap:10px}
+.sort-item:hover{background:var(--side-hover)}
+.sort-item.on{color:var(--accent-ink);font-weight:600}
+.sarr{color:var(--accent)}
+.chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 14px}
+.chip-x{display:inline-flex;align-items:center;gap:6px;background:var(--side-active-bg);color:var(--accent-ink);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);border-radius:999px;padding:5px 6px 5px 12px;font:500 12px var(--sans);cursor:pointer}
+.chip-x .x{font-size:14px;line-height:1;opacity:.65}
+.chip-x:hover .x{opacity:1}
+.chip-reset{background:none;border:0;color:var(--accent-ink);font:600 12px var(--sans);cursor:pointer;padding:5px 6px}
+.chip-reset:hover{text-decoration:underline}
 
 /* legend */
 .legend{display:flex;gap:18px;flex-wrap:wrap;align-items:center;font-size:11.5px;color:var(--text2);margin-bottom:12px}

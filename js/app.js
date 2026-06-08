@@ -118,7 +118,21 @@ function renderPrograms(){
   setText("p-count",nf.format(total)); setText("p-range",nf.format(s)+"–"+nf.format(e)); setText("p-page",PS.page+" / "+pages);
   setText("sb-n",nf.format(total));
   { const tbl=document.getElementById("pb").closest("table"); if(tbl) tbl.classList.toggle("virtual",slice.length>200); }
-  renderHead("ph",PCOLS,PS); renderStats(filtered); syncURL();
+  renderHead("ph",PCOLS,PS); renderStats(filtered); renderChips(); syncURL();
+}
+const CHIP_DEFS=[{f:"d",label:"Donor",sel:"f-donor"},{f:"prov",label:"Donor country",sel:"f-provider"},{f:"rg",label:"Region",sel:"f-region"},{f:"co",label:"Country",sel:"f-country"},{f:"sc",label:"Sector",sel:"f-sector"},{f:"sta",label:"Status",sel:"f-status"},{f:"re",label:"Results",sel:"f-res"}];
+function chipText(f,v){ return f==="re" ? (v==="Y"?"Reports results":"No results") : v; }
+function renderChips(){
+  const el=document.getElementById("chips"); if(!el) return;
+  const active=CHIP_DEFS.filter(c=>PS[c.f]); const cnt=active.length;
+  const fc=document.getElementById("filters-count"); if(fc){ fc.textContent=cnt; fc.hidden=cnt===0; }
+  const fb=document.getElementById("filters-btn"); if(fb) fb.classList.toggle("on",cnt>0);
+  if(!cnt){ el.innerHTML=""; el.hidden=true; return; }
+  el.hidden=false;
+  el.innerHTML=active.map(c=>"<button class='chip-x' data-f='"+c.f+"' data-sel='"+c.sel+"'>"+esc(c.label)+": "+esc(chipText(c.f,PS[c.f]))+" <span class='x'>×</span></button>").join("")+"<button class='chip-reset'>Reset all</button>";
+}
+function buildSortMenu(){ const m=document.getElementById("sort-menu"); if(!m) return;
+  m.innerHTML=PCOLS.filter(c=>c.k!=="src").map(c=>{ const on=PS.sort===c.k; return "<button class='sort-item"+(on?" on":"")+"' data-k='"+c.k+"'>"+esc(c.t)+(on?" <span class='sarr'>"+(PS.dir<0?"↓":"↑")+"</span>":"")+"</button>"; }).join("");
 }
 
 const OCOLS=[{k:"n",t:"Programme",c:"c-name"},{k:"s",t:"Stream",c:"c-tag"},{k:"sn",t:"Sector",c:"c-tag"},
@@ -757,6 +771,15 @@ function init(){
   const ohEl=document.getElementById("oh"); if(ohEl) ohEl.addEventListener("click",e=>{const th=e.target.closest("th");if(!th)return;const k=th.dataset.key;if(!k)return;if(OS.sort===k)OS.dir*=-1;else{OS.sort=k;OS.dir=("n i s sn t".split(" ").includes(k))?1:-1;}renderOutcomes();});
   [phEl,ohEl].forEach(elx=>{ if(elx) elx.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ const th=e.target.closest&&e.target.closest("th[data-key]"); if(th){ e.preventDefault(); th.click(); } } }); });
 
+  const _fp=document.getElementById("filters-panel"),_sm=document.getElementById("sort-menu");
+  on("filters-btn","click",e=>{ e.stopPropagation(); if(_sm)_sm.hidden=true; if(_fp){_fp.hidden=!_fp.hidden; const fb=document.getElementById("filters-btn"); if(fb)fb.setAttribute("aria-expanded",String(!_fp.hidden));} });
+  on("sort-btn","click",e=>{ e.stopPropagation(); if(_fp)_fp.hidden=true; if(_sm){ buildSortMenu(); _sm.hidden=!_sm.hidden; } });
+  const _chips=document.getElementById("chips"); if(_chips) _chips.addEventListener("click",e=>{
+    if(e.target.closest(".chip-reset")){ const r=document.getElementById("reset"); if(r)r.click(); return; }
+    const x=e.target.closest(".chip-x"); if(!x)return; const f=x.getAttribute("data-f"),sel=x.getAttribute("data-sel");
+    PS[f]=""; const s=document.getElementById(sel); if(s)s.value=""; PS.page=1; renderPrograms(); });
+  if(_sm) _sm.addEventListener("click",e=>{ const it=e.target.closest(".sort-item"); if(!it)return; const k=it.getAttribute("data-k"); if(PS.sort===k)PS.dir*=-1; else{PS.sort=k;PS.dir=PSTR.split(" ").includes(k)?1:-1;} renderPrograms(); buildSortMenu(); });
+  document.addEventListener("click",e=>{ if(_fp&&!_fp.hidden&&!e.target.closest("#filters-panel,#filters-btn"))_fp.hidden=true; if(_sm&&!_sm.hidden&&!e.target.closest("#sort-menu,#sort-btn"))_sm.hidden=true; });
   const _mt=document.getElementById("menu-toggle"),_scrim=document.getElementById("navScrim");
   const setNav=open=>{ document.body.classList.toggle("nav-open",open); if(_mt) _mt.setAttribute("aria-expanded",open?"true":"false"); };
   if(_mt) _mt.addEventListener("click",()=>setNav(!document.body.classList.contains("nav-open")));
@@ -765,7 +788,7 @@ function init(){
   document.querySelectorAll(".theme-btn").forEach(b=>b.addEventListener("click",()=>setTheme(b.dataset.theme)));
   document.querySelectorAll(".basis-btn").forEach(b=>b.addEventListener("click",()=>setBasis(b.dataset.basis)));
   const _m=document.getElementById("cardModal"); if(_m) _m.querySelectorAll("[data-close]").forEach(el=>el.addEventListener("click",closeCard));
-  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeCard(); setNav(false); } });
+  document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeCard(); setNav(false); if(_fp)_fp.hidden=true; if(_sm)_sm.hidden=true; } });
   const _pb=document.getElementById("pb"); if(_pb) _pb.addEventListener("click",e=>{ const tr=e.target.closest&&e.target.closest("tr.crow-click"); if(tr) openCard(PROGRAMS[+tr.getAttribute("data-i")]); });
   const _ob=document.getElementById("ob"); if(_ob) _ob.addEventListener("click",e=>{ const tr=e.target.closest&&e.target.closest("tr.crow-click"); if(tr) openCard(PROGRAMS[+tr.getAttribute("data-i")]); });
   const _rec=document.getElementById("pl-rec"); if(_rec) _rec.addEventListener("click",e=>{ const row=e.target.closest&&e.target.closest(".pcomp-row[data-i]"); if(row) openCard(PROGRAMS[+row.getAttribute("data-i")]); });

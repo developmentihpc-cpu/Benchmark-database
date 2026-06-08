@@ -44,9 +44,15 @@
   </div>
   <div class="controls">
    <input id="q" class="search" placeholder="Search programme, org or country…">
+   <button id="filters-btn" class="ctrl-btn" aria-expanded="false"><svg class="cbico" viewBox="0 0 16 16"><path d="M2 4h12M4 8h8M6.5 12h3"/></svg>Filters<span id="filters-count" class="ctrl-count" hidden>0</span></button>
+   <button id="sort-btn" class="ctrl-btn"><svg class="cbico" viewBox="0 0 16 16"><path d="M5 13V3M5 3 2.6 5.4M5 3l2.4 2.4M11 3v10M11 13l-2.4-2.4M11 13l2.4-2.4"/></svg>Sort</button>
+  </div>
+  <div id="filters-panel" class="filters-panel" hidden>
    <select id="f-donor"></select><select id="f-provider"></select><select id="f-region"></select><select id="f-country"></select><select id="f-sector"></select><select id="f-status"></select>
    <select id="f-res"><option value="">Results: any</option><option value="Y">Reports results</option><option value="N">No results</option></select>
   </div>
+  <div id="sort-menu" class="sort-menu" hidden></div>
+  <div id="chips" class="chips" hidden></div>
   <div class="legend">
    <span><i class="dot dot-rep"></i>reported (from IATI)</span>
    <span><i class="dot dot-der"></i>derived (duration, ≈USD)</span>
