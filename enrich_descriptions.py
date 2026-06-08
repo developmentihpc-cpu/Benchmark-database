@@ -32,7 +32,7 @@ from pathlib import Path
 DATA = Path(__file__).resolve().parent / "js" / "data.js"
 ENDPOINT = "https://d-portal.org/q?aid={aid}&form=json"
 UA = "BenchmarkDB-enrich/1.0 (+https://iatistandard.org)"
-CAP = 500  # summarised, card-sized; the app shows a clamped preview with "Show more"
+CAP = 2000  # store the full description; the app clamps it to a 3-line preview with "Show more"
 EN_WORDS = set("the of and to will this that with from are is by has have been it its their our we "
                "project programme support improve provide training health water education women children "
                "communities community access rural development assistance services people national local "
@@ -68,7 +68,7 @@ def _english_clean(text):
     if len(text) <= CAP:
         return text
     c = text[:CAP]
-    m = re.search(r"^(.{200,}[.!?])\s", c, re.S) or re.search(r"^(.*)\s\S+$", c, re.S)
+    m = re.search(r"^(.{400,}[.!?])\s", c, re.S) or re.search(r"^(.*)\s\S+$", c, re.S)
     return (m.group(1) if m else c) + "…"
 
 
