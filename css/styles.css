@@ -296,6 +296,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
 
 /* ---------- charts ---------- */
 .charts{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.ch-count{margin-left:auto;align-self:center;color:var(--text2);font-size:12px;font-variant-numeric:tabular-nums}
 .chartcard{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow);min-width:0}
 .chartcard h3{margin:0 0 2px;font-family:var(--serif);font-weight:600;font-size:15px}
 .chartcard .csub{color:var(--text2);font-size:11.5px;margin:0 0 10px}

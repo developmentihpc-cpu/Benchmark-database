@@ -438,6 +438,7 @@ function reflectControls(){
   set("oq",OS.q); set("o-stream",OS.s); set("o-sector",OS.sn); set("o-type",OS.t);
   set("opgsize",OS.size>=1e9?"all":String(OS.size));
   if(CY.country) set("cy-pick",CY.country);
+  set("ch-sector",CS.sc); set("ch-region",CS.rg); set("ch-donor",CS.d);
 }
 function syncURL(){
   if(!URL_READY) return;
@@ -455,6 +456,8 @@ function syncURL(){
     if(OS.page>1)qp.set("page",OS.page); if(OS.size!==50)qp.set("size",OS.size>=1e9?"all":OS.size);
   } else if(CURRENT_VIEW==="countries"){
     if(CY.country)qp.set("country",CY.country);
+  } else if(CURRENT_VIEW==="charts"){
+    if(CS.sc)qp.set("sector",CS.sc); if(CS.rg)qp.set("region",CS.rg); if(CS.d)qp.set("donor",CS.d);
   } else if(CURRENT_VIEW==="plan"){
     if(PL.country)qp.set("country",PL.country); if(PL.sector)qp.set("sector",PL.sector); if(PL.donor)qp.set("donor",PL.donor);
     if(PL.budget!=null)qp.set("budget",PL.budget); if(PL.dur!=null)qp.set("duration",PL.dur); if(PL.target!=null)qp.set("target",PL.target);
@@ -474,6 +477,8 @@ function route(){
     if(qp.get("page"))OS.page=+qp.get("page"); const z=qp.get("size"); if(z)OS.size=(z==="all"?1e9:+z);
   } else if(view==="countries"){
     CY.country=qp.get("country")||"";
+  } else if(view==="charts"){
+    CS.sc=qp.get("sector")||""; CS.rg=qp.get("region")||""; CS.d=qp.get("donor")||"";
   } else if(!view||view==="programmes"){
     PS.q=qp.get("q")||""; PS.d=qp.get("donor")||""; PS.rg=qp.get("region")||""; PS.co=qp.get("country")||"";
     PS.sc=qp.get("sector")||""; PS.sta=qp.get("status")||""; PS.re=qp.get("results")||""; PS.prov=qp.get("provider")||"";
@@ -514,24 +519,32 @@ function svgScatter(pts,o){ o=o||{}; const W=o.w||540,H=o.h||250,pL=46,pR=12,pT=
   return "<svg viewBox='0 0 "+W+" "+H+"' class='chart' preserveAspectRatio='xMidYMid meet'>"+g+c+"</svg>";
 }
 function chartCard(t,s,svg){ return "<div class='chartcard'><h3>"+esc(t)+"</h3><p class='csub'>"+esc(s)+"</p>"+svg+"</div>"; }
+const CS={sc:"",rg:"",d:""};
+function chartRows(){ return PROGRAMS.filter(p=> (!CS.sc||p.sn===CS.sc) && (!CS.rg||p.rg===CS.rg) && (!CS.d||p.d===CS.d)); }
 function renderCharts(){
   const el=document.getElementById("charts"); if(!el) return;
-  const usdLab=BASIS==="real"?"real 2024 USD":"nominal USD";
+  const rows=chartRows(), usdLab=BASIS==="real"?"real 2024 USD":"nominal USD";
+  const filtered=!!(CS.sc||CS.rg||CS.d);
+  setText("ch-count",fmtNum(rows.length)+(filtered?" of "+fmtNum(PROGRAMS.length):"")+" programmes");
   const edges=[1e4,1e5,1e6,1e7,1e8,1e9],blab=["<10k","10k–100k","100k–1M","1M–10M","10M–100M","100M–1B",">1B"],bc=new Array(7).fill(0);
-  PROGRAMS.forEach(p=>{ if(p._usd==null)return; let bi=0; while(bi<edges.length&&p._usd>=edges[bi])bi++; bc[bi]++; });
+  rows.forEach(p=>{ if(p._usd==null)return; let bi=0; while(bi<edges.length&&p._usd>=edges[bi])bi++; bc[bi]++; });
   const c1=svgBars(blab.map((l,i)=>({l,v:bc[i]})),{});
-  const yc={}; PROGRAMS.forEach(p=>{ if(p.year&&p.year>=2012) yc[p.year]=(yc[p.year]||0)+1; });
+  const yc={}; rows.forEach(p=>{ if(p.year&&p.year>=2012) yc[p.year]=(yc[p.year]||0)+1; });
   const years=Object.keys(yc).map(Number).sort((a,b)=>a-b);
   const c2=svgBars(years.map(y=>({l:String(y),v:yc[y]})),{rot:years.length>10});
-  const pts=PROGRAMS.filter(p=>p._usd!=null&&p._dur!=null&&p._dur>0).map(p=>({x:p._usd,y:p._dur,t:p.n+" · "+fmtCompact(p._usd)+" · "+p._dur+"mo"}));
+  const pts=rows.filter(p=>p._usd!=null&&p._dur!=null&&p._dur>0).map(p=>({x:p._usd,y:p._dur,t:p.n+" · "+fmtCompact(p._usd)+" · "+p._dur+"mo"}));
   const c3=svgScatter(pts,{});
-  const rc=REGIONS.map(rg=>{const r=PROGRAMS.filter(p=>p.rg===rg);return {l:rg,v:r.length,s:"med "+fmtCompact(median(r.map(x=>x._usd))),disp:fmtNum(r.length)};}).filter(d=>d.v).sort((a,b)=>b.v-a.v);
-  const c4=svgHBars(rc,{});
+  // 4th chart: by region normally, but by sector when a single region is selected
+  let c4,c4t,c4s;
+  if(CS.rg){ const bs=SECTORS.map(s=>{const r=rows.filter(p=>p.sn===s);return {l:s,v:r.length,s:"med "+fmtCompact(median(r.map(x=>x._usd))),disp:fmtNum(r.length)};}).filter(d=>d.v).sort((a,b)=>b.v-a.v);
+    c4=svgHBars(bs,{}); c4t="By sector"; c4s="Within "+CS.rg+"; median budget on hover"; }
+  else { const rc=REGIONS.map(rg=>{const r=rows.filter(p=>p.rg===rg);return {l:rg,v:r.length,s:"med "+fmtCompact(median(r.map(x=>x._usd))),disp:fmtNum(r.length)};}).filter(d=>d.v).sort((a,b)=>b.v-a.v);
+    c4=svgHBars(rc,{}); c4t="By region"; c4s="Programme count; median budget on hover"; }
   el.innerHTML=
-    chartCard("Budget distribution","Programmes by ≈USD band ("+usdLab+") — "+fmtNum(PROGRAMS.filter(p=>p._usd!=null).length)+" priced",c1)+
+    chartCard("Budget distribution","Programmes by ≈USD band ("+usdLab+") — "+fmtNum(rows.filter(p=>p._usd!=null).length)+" priced",c1)+
     chartCard("Programmes by start year","Count by reported start year",c2)+
     chartCard("Budget vs duration","Each point a programme — log budget ("+usdLab+") × months",c3)+
-    chartCard("By region","Programme count; median budget on hover",c4);
+    chartCard(c4t,c4s,c4);
 }
 
 /* ---------- Country profiles ---------- */
@@ -579,6 +592,9 @@ function init(){
   fillSelect("o-sector",uniq(OUTCOMES,"sn"),"All sectors");
   fillSelect("o-type",uniq(OUTCOMES,"t"),"All types");
   fillSelect("cy-pick",uniq(PROGRAMS,"co"),"Select a country");
+  fillSelect("ch-sector",uniq(PROGRAMS,"sn"),"All sectors");
+  fillSelect("ch-region",REGIONS.filter(r=>PROGRAMS.some(p=>p.rg===r)),"All regions");
+  fillSelect("ch-donor",DONORS.filter(d=>PROGRAMS.some(p=>p.d===d)),"All donor types");
   setText("badge-prog",nf.format(PROGRAMS.length));
   setText("badge-out",nf.format(OUTCOMES.length));
 
@@ -608,6 +624,9 @@ function init(){
   on("o-next","click",()=>{OS.page++;renderOutcomes();});
   on("o-export","click",exportOutcomes);
   on("cy-pick","change",e=>{CY.country=e.target.value;renderCountry();});
+  on("ch-sector","change",e=>{CS.sc=e.target.value;renderCharts();syncURL();});
+  on("ch-region","change",e=>{CS.rg=e.target.value;renderCharts();syncURL();});
+  on("ch-donor","change",e=>{CS.d=e.target.value;renderCharts();syncURL();});
 
   const phEl=document.getElementById("ph"); if(phEl) phEl.addEventListener("click",e=>{const th=e.target.closest("th");if(!th||th.classList.contains("nosort"))return;const k=th.dataset.key;if(!k)return;if(PS.sort===k)PS.dir*=-1;else{PS.sort=k;PS.dir=PSTR.split(" ").includes(k)?1:-1;}renderPrograms();});
   const ohEl=document.getElementById("oh"); if(ohEl) ohEl.addEventListener("click",e=>{const th=e.target.closest("th");if(!th)return;const k=th.dataset.key;if(!k)return;if(OS.sort===k)OS.dir*=-1;else{OS.sort=k;OS.dir=("n i s sn t".split(" ").includes(k))?1:-1;}renderOutcomes();});
