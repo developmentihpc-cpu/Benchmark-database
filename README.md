@@ -144,6 +144,24 @@ treatment of caveats.
 FX rates (`RATES` in `data.js`) are indicative, fixed, order-of-magnitude only —
 editable live in the #read_me view.
 
+## Enriching descriptions
+
+Each programme card shows a plain-language summary of **what the programme
+does**. Where a record has a real IATI activity description (the `desc` field)
+it is used verbatim; otherwise the app derives a summary from the sector and the
+programme's reported outcome indicators.
+
+[`enrich_descriptions.py`](enrich_descriptions.py) fetches those real
+descriptions from **d-portal** (an IATI Datastore mirror — **no API key
+needed**), keyed by each programme's IATI identifier, and writes them back into
+`js/data.js` as a `desc` field. It is re-runnable and resumable:
+
+```sh
+python enrich_descriptions.py              # enrich all programmes in place
+python enrich_descriptions.py --limit 50   # test on the first 50
+python enrich_descriptions.py --force      # re-fetch even if desc exists
+```
+
 ## Regenerating the data
 
 The embedded dataset was produced by a Python pipeline (not included in this

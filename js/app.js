@@ -184,9 +184,9 @@ function renderBenchmarks(){
 function dl(name,text){ const b=new Blob([text],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(b),a=document.createElement("a"); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1500); }
 function cc(v){ v=(v==null?"":String(v)); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
 function exportPrograms(){ const rows=sortRows(filterPrograms(),PS.sort,PS.dir);
-  const head=["Programme","Country","ISO","Region","Donor type","Providing country","Funder","Reporting org","Reporter type","Stream","DAC code","Sector","Status","Start","End","Duration (mo)","Currency","Amount (orig)","Basis","USD approx","Reach","Reach basis","Reports results","IATI id"];
+  const head=["Programme","Description","Country","ISO","Region","Donor type","Providing country","Funder","Reporting org","Reporter type","Stream","DAC code","Sector","Status","Start","End","Duration (mo)","Currency","Amount (orig)","Basis","USD approx","Reach","Reach basis","Reports results","IATI id"];
   const L=[head.map(cc).join(",")];
-  rows.forEach(p=>L.push([p.n,p.co,p.cc,p.rg,p.d,p.pn,(p.fn||p.r),p.r,p.rt,p.s,p.sc,p.sn,p.sta,p.st,p.en,p._dur,p.c,p.a,p.b,(p._usd==null?"":Math.round(p._usd)),(p.rc===""?"":p.rc),p.rb,(p.re?"Y":"N"),p.id].map(cc).join(",")));
+  rows.forEach(p=>L.push([p.n,(p.desc||""),p.co,p.cc,p.rg,p.d,p.pn,(p.fn||p.r),p.r,p.rt,p.s,p.sc,p.sn,p.sta,p.st,p.en,p._dur,p.c,p.a,p.b,(p._usd==null?"":Math.round(p._usd)),(p.rc===""?"":p.rc),p.rb,(p.re?"Y":"N"),p.id].map(cc).join(",")));
   dl("benchmark_programmes_filtered.csv",L.join("\n")); }
 function exportOutcomes(){ const rows=sortRows(filterOutcomes(),OS.sort,OS.dir);
   const head=["Programme","Stream","Sector","Type","Indicator","Measure","Baseline","Target","Actual","Achieved (act/tgt)"];
@@ -209,7 +209,9 @@ function renderDQ(){
   const bilat=PROGRAMS.filter(p=>p.d==="Bilateral"), bilatProv=bilat.filter(p=>p.pcc).length, multi=PROGRAMS.filter(p=>p.multi).length;
   const years=PROGRAMS.map(p=>p.year).filter(Boolean), ymin=Math.min(...years), ymax=Math.max(...years);
   const O=OUTCOMES.length, oTgt=OUTCOMES.filter(o=>typeof o.tg==="number"&&o.tg>0).length, oAct=OUTCOMES.filter(o=>typeof o.ac==="number").length;
+  const desc=PROGRAMS.filter(p=>p.desc).length;
   el.innerHTML=
+    dqTile("Has IATI description",pc(desc,N),fmtNum(desc)+" of "+fmtNum(N)+" — real activity text")+
     dqTile("Budget priced to USD",pc(priced,N),fmtNum(priced)+" of "+fmtNum(N)+" · "+fmtNum(noCur)+" report no currency")+
     dqTile("Duration derivable",pc(dur,N),"valid start + end dates")+
     dqTile("End date present",pc(end,N),fmtNum(end)+" programmes")+
@@ -369,12 +371,14 @@ function descOutputs(p){
   return items;
 }
 function progDesc(p){
+  if(p.desc) return p.desc;                                   // real IATI description (enriched)
   let s=SECTOR_DESC[p.sn]||((p.sn||"Development")+" programme.");
   const outs=descOutputs(p);
   if(outs.length) s+=" Reported outputs include "+outs.join("; ")+".";
   else if(p.rb) s+=" Activity tracked: "+p.rb+".";
   return s;
 }
+function progDescIsReal(p){ return !!p.desc; }
 function eatt(s){ return esc(s); }
 function cf(k,v){ return "<div class='cfield'><span class='ck'>"+k+"</span><span class='cv'>"+v+"</span></div>"; }
 function cfBig(k,v){ return "<div class='cfield'><span class='ck'>"+k+"</span><span class='cv big'>"+v+"</span></div>"; }
@@ -388,7 +392,7 @@ function openCard(p){ if(!p) return;
   const dpRaw="https://d-portal.org/q.html?aid="+encodeURIComponent(p.id);
   const os=OUTCOMES.filter(o=>o.n===p.n);
   let h="<div class='cardh'><h2>"+esc(p.n)+"</h2><div class='sub'>"+statusPill(p.sta)+chip(p.d)+"<span>"+esc(p.sn)+"</span><span class='muted'>· "+esc(p.s)+"</span>"+((p.d==="Bilateral"&&p.pcc)?"<span class='flow'>"+esc(p.pcc)+" → "+esc(p.cc)+"</span>":"")+"</div></div>";
-  h+="<div class='cardsec cabout-sec'><p class='cabout'>"+esc(progDesc(p))+"</p><span class='tagmini'>derived — inferred from sector &amp; reported indicators</span></div>";
+  h+="<div class='cardsec cabout-sec'><p class='cabout'>"+esc(progDesc(p))+"</p><span class='tagmini"+(progDescIsReal(p)?" rep":"")+"'>"+(progDescIsReal(p)?"reported — IATI activity description":"derived — inferred from sector &amp; reported indicators")+"</span></div>";
   h+="<div class='cardsec'><div class='cardgrid'>"+cf("Receiving country",esc(p.co)+(p.multi?" <span class='muted'>(+ others)</span>":""))+((p.d==="Bilateral")?cf("Providing country",(p.pn?esc(p.pn)+" <span class='muted'>("+esc(p.pcc)+", inferred)</span>":"—")):"")+cf("Funder",esc(p.fn||p.r||"—"))+cf("Region",esc(p.rg))+cf("Reporting org",esc(p.r)+" <span class='muted'>("+esc(p.rt||"—")+")</span>")+cf("Sector code",esc(p.sc))+"</div></div>";
   h+="<div class='cardsec'><h3>Finance &amp; timeline</h3><div class='cardgrid'>"+cfBig("Budget",esc(p.c)+" "+nf.format(Math.round(p.a)))+cfBig(BASIS==="real"?"≈ real 2024 USD":"≈ nominal USD",fmtUSD(p._usd))+cf("FX applied",esc(fxNote(p)))+cf("Reported as",esc(p.b||"—"))+cf("Start",esc(p.st||"—"))+cf("End",esc(p.en||"—"))+cf("Duration",(p._dur==null?"—":p._dur+" months"))+"</div></div>";
   let rr=cf("Reach (reported)",(p.rc===""||p.rc==null)?"—":fmtNum(p.rc));
