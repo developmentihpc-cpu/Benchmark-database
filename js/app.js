@@ -15,11 +15,9 @@ const SECTORS=["Emergency response","Basic drinking water","Public sector policy
 const DONORS=["Bilateral","Multilateral","NGO","Foundation","Private sector"];
 const REGIONS=["Sub-Saharan Africa","MENA + Afg/Pak","South Asia","East Asia & Pacific","Latin Am. & Carib.","Europe & C. Asia"];
 const STATUS_CLASS={Ongoing:"st-ong",Planned:"st-plan",Finalisation:"st-fin",Closed:"st-clo",Suspended:"st-sus",Cancelled:"st-sus"};
-const DAY=864e5;
-
-function parseDate(s){ if(!s) return null; const t=Date.parse(s); return isNaN(t)?null:t; }
-function durMonths(st,en){ const a=parseDate(st),b=parseDate(en); if(a==null||b==null||b<a) return null; return Math.round((b-a)/(DAY*30.44)); }
-function median(arr){ const a=arr.filter(v=>typeof v==="number"&&!isNaN(v)).sort((x,y)=>x-y); if(!a.length) return null; const m=Math.floor(a.length/2); return a.length%2?a[m]:(a[m-1]+a[m])/2; }
+/* Pure helpers (DAY, parseDate, durMonths, median, quantile, statsOf, pctRank,
+   num, esc, cc, achClass, nf, fmtUSD, fmtCompact, fmtNum, fmtPct) live in
+   js/lib.js, loaded before app.js. */
 let BASIS="nominal";
 function deflF(y){ if(BASIS!=="real"||typeof DEFLATOR==="undefined"||!DEFLATOR.f) return 1; const f=DEFLATOR.f[String(y)]; return (typeof f==="number")?f:1; }
 function usdOf(r){ const x=RATES[r.c]; if(typeof x!=="number") return null; return r.a*x*deflF(r.year); }
@@ -33,12 +31,7 @@ recomputeUSD();
 PROGRAMS.forEach((p,i)=>{p._i=i;});
 const PROG_BY_NAME={}; PROGRAMS.forEach(p=>{ if(p.n!=null && !(p.n in PROG_BY_NAME)) PROG_BY_NAME[p.n]=p._i; });
 
-const nf=new Intl.NumberFormat("en-US");
-function fmtUSD(v){ return (v==null)?"—":"$"+nf.format(Math.round(v)); }
-function fmtCompact(v){ if(v==null) return "—"; const a=Math.abs(v); if(a>=1e9) return "$"+(v/1e9).toFixed(1)+"B"; if(a>=1e6) return "$"+(v/1e6).toFixed(1)+"M"; if(a>=1e3) return "$"+Math.round(v/1e3)+"k"; return "$"+Math.round(v); }
-function fmtNum(v){ return (v==null)?"—":nf.format(v); }
-function fmtPct(v){ return (v==null)?"—":Math.round(v*100)+"%"; }
-function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+/* nf, fmtUSD, fmtCompact, fmtNum, fmtPct, esc — see js/lib.js */
 
 const PS={q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",sort:"_usd",dir:-1,page:1,size:50};
 const OS={q:"",s:"",sn:"",t:"",sort:"_ach",dir:-1,page:1,size:50};
@@ -128,7 +121,7 @@ function renderPrograms(){
 const OCOLS=[{k:"n",t:"Programme",c:"c-name"},{k:"s",t:"Stream",c:"c-tag"},{k:"sn",t:"Sector",c:"c-tag"},
  {k:"t",t:"Type",c:"c-tag"},{k:"i",t:"Indicator",c:"c-ind"},{k:"bl",t:"Baseline",c:"c-num"},
  {k:"tg",t:"Target",c:"c-num"},{k:"ac",t:"Actual",c:"c-num"},{k:"_ach",t:"Achieved",c:"c-num"}];
-function achClass(v){ if(v==null) return ""; if(v>=1) return "a5"; if(v>=.75) return "a4"; if(v>=.5) return "a3"; if(v>=.25) return "a2"; return "a1"; }
+/* achClass — see js/lib.js */
 function renderOutcomes(){
   let rows=filterOutcomes(); const total=rows.length; rows=sortRows(rows,OS.sort,OS.dir);
   const pages=Math.max(1,Math.ceil(total/OS.size)); if(OS.page>pages) OS.page=pages;
@@ -190,7 +183,7 @@ function renderBenchmarks(){
 }
 
 function dl(name,text){ const b=new Blob([text],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(b),a=document.createElement("a"); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1500); }
-function cc(v){ v=(v==null?"":String(v)); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+/* cc (CSV cell) — see js/lib.js */
 function exportPrograms(){ const rows=sortRows(filterPrograms(),PS.sort,PS.dir);
   const head=["Programme","Description","Country","ISO","Region","Donor type","Providing country","Funder","Reporting org","Reporter type","Stream","DAC code","Sector","Status","Start","End","Duration (mo)","Currency","Amount (orig)","Basis","USD approx","Reach","Reach basis","Reports results","IATI id"];
   const L=[head.map(cc).join(",")];
@@ -236,12 +229,8 @@ const COUNTRY_REGION=Object.assign({},(typeof DEVREGION!=="undefined"?DEVREGION:
 PROGRAMS.forEach(p=>{ if(p.co&&!COUNTRY_REGION[p.co]) COUNTRY_REGION[p.co]=p.rg; });
 const ALL_COUNTRIES=(typeof DEVREGION!=="undefined")?Object.keys(DEVREGION).sort():uniq(PROGRAMS,"co");
 const PL={country:"",sector:"Basic health care",donor:"",need:null,budget:null,dur:null,target:null,link:false,base:null};
-function num(v){ const x=parseFloat(v); return isNaN(x)?null:x; }
 function setVal(id,v){ const el=document.getElementById(id); if(el) el.value=(v==null?"":v); }
-function quantile(s,p){ if(!s.length) return null; const i=(s.length-1)*p,lo=Math.floor(i),hi=Math.ceil(i); return lo===hi?s[lo]:s[lo]+(s[hi]-s[lo])*(i-lo); }
-function statsOf(rows,key){ const a=rows.map(r=>r[key]).filter(v=>typeof v==="number"&&!isNaN(v)).sort((x,y)=>x-y);
-  return {n:a.length,min:a[0],max:a[a.length-1],p25:quantile(a,.25),med:quantile(a,.5),p75:quantile(a,.75),arr:a}; }
-function pctRank(arr,v){ if(!arr.length||v==null) return null; let c=0; for(const x of arr) if(x<=v) c++; return c/arr.length; }
+/* num, quantile, statsOf, pctRank — see js/lib.js */
 function planCohort(){
   let base=PROGRAMS.filter(p=>p.sn===PL.sector);
   if(PL.donor) base=base.filter(p=>p.d===PL.donor);

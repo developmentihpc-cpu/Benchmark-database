@@ -83,9 +83,13 @@ Database/
 │   └── fonts.css      # @font-face for the self-hosted fonts
 ├── fonts/            # Source Serif 4 + Public Sans woff2 subsets (self-hosted)
 ├── js/
+│   ├── lib.js         # pure helpers (median, quantile, fmt*, esc…) —
+│   │                  #   browser globals + Node module (tested)
 │   ├── data.js        # embedded dataset: PROGRAMS, OUTCOMES, RATES,
 │   │                  #   TOTALS, DEVREGION, DEFLATOR, META (globals)
 │   └── app.js         # all application logic (vanilla JS, no framework)
+├── test/
+│   └── data.test.js   # unit tests for js/lib.js (node --test)
 ├── serve.pl          # zero-install Perl static dev server (Git for Windows)
 ├── serve.py          # tiny no-cache static dev server (if you have Python)
 └── README.md
@@ -94,9 +98,19 @@ Database/
 Fonts are **self-hosted** (`fonts/` + `css/fonts.css`), so the app makes **no
 third-party requests** and works fully offline.
 
-`data.js` and `app.js` are plain (non-module) scripts, so the `const`/`let`
-declarations in `data.js` are visible to `app.js`. Load order matters: `data.js`
-must come before `app.js` (it does, in `index.html`).
+`lib.js`, `data.js` and `app.js` are plain (non-module) scripts, so their
+top-level declarations are visible to each other. Load order matters —
+`lib.js` → `data.js` → `app.js` (as in `index.html`).
+
+## Tests
+
+The pure helpers in `js/lib.js` (medians, quantiles, FX/date math, formatting)
+have unit tests. `lib.js` is dual-mode: a browser global script *and* a Node
+module, so the tests import it directly. Run with Node 18+ (no dependencies):
+
+```sh
+npm test          # alias for: node --test
+```
 
 ## Views
 
