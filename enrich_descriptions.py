@@ -32,10 +32,54 @@ from pathlib import Path
 DATA = Path(__file__).resolve().parent / "js" / "data.js"
 ENDPOINT = "https://d-portal.org/q?aid={aid}&form=json"
 UA = "BenchmarkDB-enrich/1.0 (+https://iatistandard.org)"
-MAXLEN = 280  # keep descriptions card-sized
+CAP = 500  # summarised, card-sized; the app shows a clamped preview with "Show more"
+EN_WORDS = set("the of and to will this that with from are is by has have been it its their our we "
+               "project programme support improve provide training health water education women children "
+               "communities community access rural development assistance services people national local "
+               "government district market farmers schools".split())
+FR_WORDS = set("le la les des une un du et à pour dans avec sur par au aux que qui cette leur sont nous "
+               "vous ses développement renforcement gestion appui projet santé éducation communauté mise "
+               "oeuvre accès formation afin ainsi mediante hacia niños proyecto programa apoyo vise renforcer "
+               "améliorer promouvoir contrat contribuer sécurité alimentaire système soutien".split())
+PLACEHOLDER = re.compile(r"no description.{0,40}available|description indisponible|"
+                         r"description non disponible|sin descripci|pas de description", re.I)
+WORD = re.compile(r"[a-zà-ÿ']+", re.I)
+
+
+def _english_clean(text):
+    """Strip HTML, drop placeholders, and keep only English-reading text.
+
+    Assumes English unless there is a strong foreign-stopword signal
+    (>=3 French/Spanish stopwords outnumbering English ones). Non-English
+    descriptions return None, so the app uses its English derived summary.
+    """
+    if not text:
+        return None
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = text.replace("�", "").replace("¿", "'")
+    text = re.sub(r"\s+", " ", text).strip()
+    if not text or PLACEHOLDER.search(text):
+        return None
+    low = text.lower()
+    en = sum(1 for w in WORD.findall(low) if w in EN_WORDS)
+    fr = sum(1 for w in WORD.findall(low) if w in FR_WORDS)
+    if fr >= 3 and fr > en:
+        return None
+    if len(text) <= CAP:
+        return text
+    c = text[:CAP]
+    m = re.search(r"^(.{200,}[.!?])\s", c, re.S) or re.search(r"^(.*)\s\S+$", c, re.S)
+    return (m.group(1) if m else c) + "…"
 
 
 def fetch_desc(aid, retries=2):
+    """Return an English, summarised description for an IATI id, or None.
+
+    Prefers an explicit English narrative (by description type); accepts an
+    untagged narrative only if it reads as English; never returns a narrative
+    explicitly tagged another language (the app falls back to an English
+    sector-derived summary instead).
+    """
     url = ENDPOINT.format(aid=urllib.parse.quote(aid, safe=""))
     req = urllib.request.Request(url, headers={"User-Agent": UA})
     for attempt in range(retries + 1):
@@ -48,27 +92,39 @@ def fetch_desc(aid, retries=2):
                 return None
             time.sleep(0.6 * (attempt + 1))
     acts = (data.get("xson") or [{}])[0].get("/iati-activities/iati-activity") or []
-    by_type, title = {}, None
+    cand, title_en = [], None  # cand: (type:int, lang:str, text:str)
     for a in acts:
+        adef = (a.get("@xml:lang") or "").lower()
         for d in (a.get("/description") or []):
-            typ = str(d.get("@type", "1"))
+            raw = str(d.get("@type", "1"))
+            ty = int(raw) if raw.isdigit() else 1
             for n in (d.get("/narrative") or []):
                 t = (n.get("") or "").strip()
-                if t and typ not in by_type:
-                    by_type[typ] = t
-        if title is None:
+                if not t:
+                    continue
+                lang = (n.get("@xml:lang") or adef or "").lower()
+                cand.append((ty, lang, t))
+        if title_en is None:
             for tt in (a.get("/title") or []):
                 for n in (tt.get("/narrative") or []):
                     t = (n.get("") or "").strip()
-                    if t:
-                        title = t
-                        break
-    # prefer general description (@type 1), then any other, then the title
-    text = by_type.get("1") or next(iter(by_type.values()), None) or title
-    if not text:
+                    lang = (n.get("@xml:lang") or adef or "").lower()
+                    if t and lang == "en":
+                        title_en = t
+
+    def pick(want):
+        for ty in (1, 2, 3, 4, 5, 6, 7, 8, 99):
+            for cty, clang, t in sorted(cand, key=lambda x: x[0]):
+                if ty != 99 and cty != ty:
+                    continue
+                if want == "en" and clang == "en":
+                    return t
+                if want == "" and clang == "":
+                    return t
         return None
-    text = re.sub(r"\s+", " ", text).strip()
-    return (text[: MAXLEN - 1] + "…") if len(text) > MAXLEN else text
+
+    text = pick("en") or pick("") or title_en
+    return _english_clean(text)
 
 
 def main():

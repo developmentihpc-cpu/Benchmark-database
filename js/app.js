@@ -211,7 +211,7 @@ function renderDQ(){
   const O=OUTCOMES.length, oTgt=OUTCOMES.filter(o=>typeof o.tg==="number"&&o.tg>0).length, oAct=OUTCOMES.filter(o=>typeof o.ac==="number").length;
   const desc=PROGRAMS.filter(p=>p.desc).length;
   el.innerHTML=
-    dqTile("Has IATI description",pc(desc,N),fmtNum(desc)+" of "+fmtNum(N)+" — real activity text")+
+    dqTile("English description",pc(desc,N),fmtNum(desc)+" of "+fmtNum(N)+" — real IATI text; rest use a derived summary")+
     dqTile("Budget priced to USD",pc(priced,N),fmtNum(priced)+" of "+fmtNum(N)+" · "+fmtNum(noCur)+" report no currency")+
     dqTile("Duration derivable",pc(dur,N),"valid start + end dates")+
     dqTile("End date present",pc(end,N),fmtNum(end)+" programmes")+
@@ -392,7 +392,8 @@ function openCard(p){ if(!p) return;
   const dpRaw="https://d-portal.org/q.html?aid="+encodeURIComponent(p.id);
   const os=OUTCOMES.filter(o=>o.n===p.n);
   let h="<div class='cardh'><h2>"+esc(p.n)+"</h2><div class='sub'>"+statusPill(p.sta)+chip(p.d)+"<span>"+esc(p.sn)+"</span><span class='muted'>· "+esc(p.s)+"</span>"+((p.d==="Bilateral"&&p.pcc)?"<span class='flow'>"+esc(p.pcc)+" → "+esc(p.cc)+"</span>":"")+"</div></div>";
-  h+="<div class='cardsec cabout-sec'><p class='cabout'>"+esc(progDesc(p))+"</p><span class='tagmini"+(progDescIsReal(p)?" rep":"")+"'>"+(progDescIsReal(p)?"reported — IATI activity description":"derived — inferred from sector &amp; reported indicators")+"</span></div>";
+  const _ad=progDesc(p), _along=_ad.length>200;
+  h+="<div class='cardsec cabout-sec'><p class='cabout"+(_along?" clamp":"")+"'>"+esc(_ad)+"</p>"+(_along?"<button class='cmore' type='button'>Show more</button>":"")+"<span class='tagmini"+(progDescIsReal(p)?" rep":"")+"'>"+(progDescIsReal(p)?"reported — IATI activity description":"derived — inferred from sector &amp; reported indicators")+"</span></div>";
   h+="<div class='cardsec'><div class='cardgrid'>"+cf("Receiving country",esc(p.co)+(p.multi?" <span class='muted'>(+ others)</span>":""))+((p.d==="Bilateral")?cf("Providing country",(p.pn?esc(p.pn)+" <span class='muted'>("+esc(p.pcc)+", inferred)</span>":"—")):"")+cf("Funder",esc(p.fn||p.r||"—"))+cf("Region",esc(p.rg))+cf("Reporting org",esc(p.r)+" <span class='muted'>("+esc(p.rt||"—")+")</span>")+cf("Sector code",esc(p.sc))+"</div></div>";
   h+="<div class='cardsec'><h3>Finance &amp; timeline</h3><div class='cardgrid'>"+cfBig("Budget",esc(p.c)+" "+nf.format(Math.round(p.a)))+cfBig(BASIS==="real"?"≈ real 2024 USD":"≈ nominal USD",fmtUSD(p._usd))+cf("FX applied",esc(fxNote(p)))+cf("Reported as",esc(p.b||"—"))+cf("Start",esc(p.st||"—"))+cf("End",esc(p.en||"—"))+cf("Duration",(p._dur==null?"—":p._dur+" months"))+"</div></div>";
   let rr=cf("Reach (reported)",(p.rc===""||p.rc==null)?"—":fmtNum(p.rc));
@@ -411,6 +412,7 @@ function openCard(p){ if(!p) return;
   document.getElementById("cardBody").innerHTML=h;
   const m=document.getElementById("cardModal"); m.hidden=false;
   m.querySelectorAll("[data-copy]").forEach(btn=>btn.addEventListener("click",()=>copyText(btn.getAttribute("data-copy"),btn)));
+  const _more=m.querySelector(".cmore"); if(_more) _more.addEventListener("click",()=>{ const pEl=m.querySelector(".cabout"); const ex=pEl.classList.toggle("expanded"); pEl.classList.toggle("clamp",!ex); _more.textContent=ex?"Show less":"Show more"; });
 }
 
 function setText(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
