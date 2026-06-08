@@ -85,7 +85,7 @@ nav{display:flex;flex-direction:column;gap:2px;padding:0 12px}
 .rcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
 .rcard::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--line2)}
 .rcard:nth-child(1){background:color-mix(in srgb,var(--accent) 5%,var(--panel));border-color:color-mix(in srgb,var(--accent) 26%,var(--line))}
-.rcard:nth-child(1)::before{background:linear-gradient(90deg,var(--accent),#5B8DEF)}
+.rcard:nth-child(1)::before{background:linear-gradient(90deg,var(--accent),#CBA64E)}
 .rk{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--text2)}
 .rv{font-family:var(--serif);font-weight:600;font-size:33px;line-height:1.05;margin-top:7px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .rs{font-size:11px;color:var(--faint);margin-top:3px}
