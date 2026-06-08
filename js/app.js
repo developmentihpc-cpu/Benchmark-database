@@ -24,6 +24,7 @@ OUTCOMES.forEach(o=>{ o._ach=(typeof o.tg==="number"&&o.tg>0&&typeof o.ac==="num
 function recomputeUSD(){ PROGRAMS.forEach(p=>{ p._usd=usdOf(p); }); }
 recomputeUSD();
 PROGRAMS.forEach((p,i)=>{p._i=i;});
+const PROG_BY_NAME={}; PROGRAMS.forEach(p=>{ if(p.n!=null && !(p.n in PROG_BY_NAME)) PROG_BY_NAME[p.n]=p._i; });
 
 const nf=new Intl.NumberFormat("en-US");
 function fmtUSD(v){ return (v==null)?"—":"$"+nf.format(Math.round(v)); }
@@ -125,8 +126,8 @@ function renderOutcomes(){
   let rows=filterOutcomes(); const total=rows.length; rows=sortRows(rows,OS.sort,OS.dir);
   const pages=Math.max(1,Math.ceil(total/OS.size)); if(OS.page>pages) OS.page=pages;
   const start=(OS.page-1)*OS.size, slice=rows.slice(start,start+OS.size);
-  document.getElementById("ob").innerHTML=slice.map(o=>{ const m=(o.m==="%")?"%":"";
-    return "<tr><td class='c-name'>"+esc(o.n)+"</td><td class='c-tag'>"+esc(o.s)+"</td><td class='c-tag'>"+esc(o.sn)+"</td>"+
+  document.getElementById("ob").innerHTML=slice.map(o=>{ const m=(o.m==="%")?"%":""; const pi=PROG_BY_NAME[o.n];
+    return "<tr"+(pi!=null?" class='crow-click' data-i='"+pi+"'":"")+"><td class='c-name'>"+esc(o.n)+(pi!=null?" <span class='rowmore'>open ›</span>":"")+"</td><td class='c-tag'>"+esc(o.s)+"</td><td class='c-tag'>"+esc(o.sn)+"</td>"+
      "<td class='c-tag'>"+esc(o.t)+"</td><td class='c-ind'>"+esc(o.i)+"</td>"+
      "<td class='c-num rep'>"+(o.bl==null?"—":nf.format(o.bl)+m)+"</td>"+
      "<td class='c-num rep'>"+(o.tg==null?"—":nf.format(o.tg)+m)+"</td>"+
@@ -622,6 +623,7 @@ function init(){
   const _m=document.getElementById("cardModal"); if(_m) _m.querySelectorAll("[data-close]").forEach(el=>el.addEventListener("click",closeCard));
   document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeCard(); setNav(false); } });
   const _pb=document.getElementById("pb"); if(_pb) _pb.addEventListener("click",e=>{ const tr=e.target.closest&&e.target.closest("tr.crow-click"); if(tr) openCard(PROGRAMS[+tr.getAttribute("data-i")]); });
+  const _ob=document.getElementById("ob"); if(_ob) _ob.addEventListener("click",e=>{ const tr=e.target.closest&&e.target.closest("tr.crow-click"); if(tr) openCard(PROGRAMS[+tr.getAttribute("data-i")]); });
   const _rec=document.getElementById("pl-rec"); if(_rec) _rec.addEventListener("click",e=>{ const row=e.target.closest&&e.target.closest(".pcomp-row[data-i]"); if(row) openCard(PROGRAMS[+row.getAttribute("data-i")]); });
 
   setTheme("light"); buildFX(); renderDQ(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
