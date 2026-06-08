@@ -64,13 +64,14 @@ function countUp(el,to,fmt){ if(!el) return; const from=(typeof el._val==="numbe
   if(REDUCE_MOTION){ el.textContent=fmt(to); return; }
   if(to==null){ el.textContent=fmt(null); return; } const t0=performance.now(),d=460;
   function step(t){ const k=Math.min(1,(t-t0)/d),e=1-Math.pow(1-k,3); el.textContent=fmt(from+(to-from)*e); if(k<1) requestAnimationFrame(step); else el.textContent=fmt(to); }
-  requestAnimationFrame(step); }
+  requestAnimationFrame(step);
+  clearTimeout(el._ct); el._ct=setTimeout(function(){ el.textContent=fmt(to); }, d+90); }   // safety net if rAF is throttled (backgrounded tab)
 
 function renderStats(rows){
   const n=rows.length, medB=median(rows.map(r=>r._usd)), medD=median(rows.map(r=>r._dur));
   const wr=rows.filter(r=>r.re).length, noFx=rows.filter(r=>r._usd==null).length;
   countUp(document.getElementById("st-n"),n,v=>fmtNum(Math.round(v)));
-  countUp(document.getElementById("st-budget"),medB,fmtCompact);
+  countUp(document.getElementById("st-budget"),medB,fmtUSD);
   countUp(document.getElementById("st-dur"),medD,v=>(v==null?"—":Math.round(v)));
   countUp(document.getElementById("st-res"),n?wr/n:null,fmtPct);
   const basis=BASIS==="real"?"≈ real 2024 USD (CPI)":"≈ nominal USD · FX";
@@ -294,7 +295,7 @@ function renderPlanRec(){
   if(rows.length<8) h+="<p class='pflag'>Thin sample — treat as indicative, or widen the need.</p>";
   if(conc) h+="<p class='pflag'>"+esc(conc.msg)+"</p>";
   h+="<div class='prec'>"+
-    recStat("Median budget",fmtCompact(b.med),"middle 50%: "+fmtCompact(b.p25)+"–"+fmtCompact(b.p75))+
+    recStat("Median budget",fmtUSD(b.med),"middle 50%: "+fmtUSD(b.p25)+"–"+fmtUSD(b.p75))+
     recStat("Typical duration",(d.med==null?"—":Math.round(d.med)+" mo"),"middle 50%: "+(d.p25==null?"—":Math.round(d.p25))+"–"+(d.p75==null?"—":Math.round(d.p75))+" mo")+
     recStat("Report results",fmtPct(resPct),rows.length+" programmes")+
     recStat("Common funders",mixTop||"—","by share of cohort")+
@@ -302,7 +303,7 @@ function renderPlanRec(){
   if(provTopStr) h+="<p class='pmix'>Typical providing countries: <b>"+provTopStr+"</b></p>";
   if(ach) h+="<p class='pach'>Reality check: across <b>"+ach.n+"</b> comparable indicators with a target and an actual, the median actual was <b>"+Math.round(ach.med*100)+"%</b> of target; "+Math.round(ach.hit75*100)+"% reached ≥75%. <span class='muted'>IATI target/actual data is noisy — design to expected actuals, not nominal targets.</span></p>";
   h+="<div class='pcomp'><div class='pcomp-h'>Comparable programmes — pick one to start from, or use the cohort median</div>"+comp.map(p=>
-    "<div class='pcomp-row' data-i='"+p._i+"'><div class='pcomp-info crow-click' data-i='"+p._i+"'><span class='pcn'>"+esc(p.n)+"</span><span class='pcm'>"+esc(p.co)+" · "+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+(p._dur==null?"—":p._dur+" mo")+" · <span class='rowmore'>open ›</span></span></div><button class='pl-use-proj' data-i='"+p._i+"' title='Start your plan from this programme'>Use →</button></div>").join("")+"</div>";
+    "<div class='pcomp-row' data-i='"+p._i+"'><div class='pcomp-info crow-click' data-i='"+p._i+"'><span class='pcn'>"+esc(p.n)+"</span><span class='pcm'>"+esc(p.co)+" · "+chip(p.d)+" · "+fmtUSD(p._usd)+" · "+(p._dur==null?"—":p._dur+" mo")+" · <span class='rowmore'>open ›</span></span></div><button class='pl-use-proj' data-i='"+p._i+"' title='Start your plan from this programme'>Use →</button></div>").join("")+"</div>";
   h+="<button id='pl-use' class='btn'>Use cohort median as a starting point →</button>";
   el.innerHTML=h;
   const u=document.getElementById("pl-use"); if(u) u.addEventListener("click",()=>seedPlan(b.med,d.med,"cohort median"));
@@ -347,24 +348,24 @@ function renderPlanCalc(){
   const budget=PL.budget,dur=PL.dur,target=PL.target;
   const burn=(budget&&dur)?budget/dur:null, cpp=(budget&&target)?budget/target:null;
   const bp=pctRank(b.arr,budget), dp=pctRank(d.arr,dur), burnp=(burn!=null)?pctRank(bn.arr,burn):null;
-  const durFmt=v=>Math.round(v)+" mo", burnFmt=v=>fmtCompact(v)+"/mo";
+  const durFmt=v=>Math.round(v)+" mo", burnFmt=v=>fmtUSD(v)+"/mo";
   let h=PL.source?"<p class='pl-srcline'>Seeded from <b>"+esc(PL.source)+"</b> — a starting point; adjust below.</p>":"";
   h+="<div class='pcalc'>"+
-    calcStat("Monthly burn",burn==null?"—":fmtCompact(burn)+"/mo","budget ÷ duration")+
+    calcStat("Monthly burn",burn==null?"—":fmtUSD(burn)+"/mo","budget ÷ duration")+
     calcStat("Cost / person",cpp==null?"—":"$"+nf.format(Math.round(cpp)),target?"your budget ÷ your target":"set a target")+
     calcStat("Budget vs peers",bp==null?"—":ord(Math.round(bp*100))+" pct","of "+b.n+" comparables")+
     calcStat("Burn vs peers",burnp==null?"—":ord(Math.round(burnp*100))+" pct","of "+bn.n+" comparables")+
   "</div>";
-  h+="<div class='pstrip-wrap'>"+strip("Budget",b,budget,true,fmtCompact,"budget")+strip("Duration",d,dur,false,durFmt,"dur")+strip("Monthly burn",bn,burn,true,burnFmt)+"</div>";
+  h+="<div class='pstrip-wrap'>"+strip("Budget",b,budget,true,fmtUSD,"budget")+strip("Duration",d,dur,false,durFmt,"dur")+strip("Monthly burn",bn,burn,true,burnFmt)+"</div>";
   const reads=[];
-  if(budget!=null&&b.n) reads.push("Your budget of <b>"+fmtCompact(budget)+"</b> sits at the <b>"+ord(Math.round(bp*100))+" percentile</b> of "+b.n+" comparable programmes (their median is "+fmtCompact(b.med)+").");
+  if(budget!=null&&b.n) reads.push("Your budget of <b>"+fmtUSD(budget)+"</b> sits at the <b>"+ord(Math.round(bp*100))+" percentile</b> of "+b.n+" comparable programmes (their median is "+fmtUSD(b.med)+").");
   if(dur!=null&&d.n) reads.push("Your <b>"+dur+"-month</b> duration is around the <b>"+ord(Math.round(dp*100))+" percentile</b> (middle 50% run "+Math.round(d.p25)+"–"+Math.round(d.p75)+" months).");
-  if(burn!=null&&bn.n) reads.push("Your spend rate of <b>"+fmtCompact(burn)+"/mo</b> is at the <b>"+ord(Math.round(burnp*100))+" percentile</b> of comparable programmes.");
+  if(burn!=null&&bn.n) reads.push("Your spend rate of <b>"+fmtUSD(burn)+"/mo</b> is at the <b>"+ord(Math.round(burnp*100))+" percentile</b> of comparable programmes.");
   if(reads.length) h+="<div class='preads'>"+reads.map(r=>"<p>"+r+"</p>").join("")+"</div>";
   const f=[];
-  if(budget!=null&&b.n>=8){ if(budget<b.p25) f.push("Budget is below the middle 50% ("+fmtCompact(b.p25)+"–"+fmtCompact(b.p75)+") of comparable programmes — trim scope/duration, or check you're not under-resourcing."); else if(budget>b.p75) f.push("Budget is above the middle 50% ("+fmtCompact(b.p25)+"–"+fmtCompact(b.p75)+") — make sure scope justifies it."); }
+  if(budget!=null&&b.n>=8){ if(budget<b.p25) f.push("Budget is below the middle 50% ("+fmtUSD(b.p25)+"–"+fmtUSD(b.p75)+") of comparable programmes — trim scope/duration, or check you're not under-resourcing."); else if(budget>b.p75) f.push("Budget is above the middle 50% ("+fmtUSD(b.p25)+"–"+fmtUSD(b.p75)+") — make sure scope justifies it."); }
   if(dur!=null&&d.n>=8){ if(dur<d.p25) f.push("Duration is shorter than most comparable programmes ("+Math.round(d.p25)+"–"+Math.round(d.p75)+" mo) — outcomes may need more time to land."); else if(dur>d.p75) f.push("Duration is longer than most comparable programmes ("+Math.round(d.p25)+"–"+Math.round(d.p75)+" mo) — long programmes can drift; check the case for the extra time."); }
-  if(burn!=null&&bn.n>=8){ if(burn>bn.p75) f.push("Monthly burn is high vs peers ("+fmtCompact(bn.p25)+"–"+fmtCompact(bn.p75)+"/mo) — an ambitious delivery pace; check absorption capacity."); else if(burn<bn.p25) f.push("Monthly burn is low vs peers ("+fmtCompact(bn.p25)+"–"+fmtCompact(bn.p75)+"/mo) — a long, thinly-resourced programme."); }
+  if(burn!=null&&bn.n>=8){ if(burn>bn.p75) f.push("Monthly burn is high vs peers ("+fmtUSD(bn.p25)+"–"+fmtUSD(bn.p75)+"/mo) — an ambitious delivery pace; check absorption capacity."); else if(burn<bn.p25) f.push("Monthly burn is low vs peers ("+fmtUSD(bn.p25)+"–"+fmtUSD(bn.p75)+"/mo) — a long, thinly-resourced programme."); }
   if(target!=null){ const ach=cohortAch(rows); if(ach) f.push("Comparable programmes reported a median actual of "+Math.round(ach.med*100)+"% of target ("+ach.n+" indicators); only "+Math.round(ach.hit100*100)+"% met target in full. Plan to expected actuals, not the nominal target."); }
   if(cpp!=null) f.push("Cost per person is your own figure (budget ÷ target). Comparable programmes rarely report reach, so there's no external benchmark — sense-check against sector unit-cost studies.");
   if(f.length) h+="<ul class='pflags'>"+f.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>";
@@ -406,7 +407,7 @@ function renderBasket(){
   const el=document.getElementById("pl-basket"); if(!el) return;
   if(!BASKET.length){ el.innerHTML="<div class='pcard-h'><span class='pstep'>4</span><h2>Saved plans</h2></div><p class='pscope'>Build a plan above and <b>Add to basket</b> to collect several, then export them together.</p>"; return; }
   let h="<div class='pcard-h'><span class='pstep'>4</span><h2>Saved plans <span class='bk-n'>"+BASKET.length+"</span></h2><div class='tb-actions'><button id='bk-clear' class='btn ghost'>Clear</button><button id='bk-export' class='btn'>⤓ Export all ("+BASKET.length+")</button></div></div>";
-  h+="<div class='bk-list'>"+BASKET.map((p,i)=>"<div class='bk-row'><div class='bk-main'><span class='bk-title'>"+esc(p.sector)+(p.country&&p.country!=="Any"?" · "+esc(p.country):"")+(p.prov&&p.prov!=="Any"?" · "+esc(p.prov):"")+"</span><span class='bk-sub'>"+(p.budget!=null?fmtCompact(p.budget):"—")+" · "+(p.dur!=null?p.dur+" mo":"—")+(p.target!=null?" · "+fmtNum(p.target)+" reach":"")+" · seeded from "+esc(p.source)+"</span></div><button class='bk-x' data-i='"+i+"' aria-label='Remove plan'>×</button></div>").join("")+"</div>";
+  h+="<div class='bk-list'>"+BASKET.map((p,i)=>"<div class='bk-row'><div class='bk-main'><span class='bk-title'>"+esc(p.sector)+(p.country&&p.country!=="Any"?" · "+esc(p.country):"")+(p.prov&&p.prov!=="Any"?" · "+esc(p.prov):"")+"</span><span class='bk-sub'>"+(p.budget!=null?fmtUSD(p.budget):"—")+" · "+(p.dur!=null?p.dur+" mo":"—")+(p.target!=null?" · "+fmtNum(p.target)+" reach":"")+" · seeded from "+esc(p.source)+"</span></div><button class='bk-x' data-i='"+i+"' aria-label='Remove plan'>×</button></div>").join("")+"</div>";
   el.innerHTML=h;
 }
 function exportBasket(){
@@ -432,14 +433,14 @@ function buildPlanBrief(){
     briefRow("Budget", budget!=null?fmtUSD(budget)+" <span class='brief-dim'>("+esc(usdBasisLabel())+")</span>":"—")+
     briefRow("Duration", dur!=null?dur+" months":"—")+
     briefRow("Target reach", target!=null?fmtNum(target)+" people":"—")+
-    briefRow("Monthly burn", burn!=null?fmtCompact(burn)+"/mo":"—")+
+    briefRow("Monthly burn", burn!=null?fmtUSD(burn)+"/mo":"—")+
     briefRow("Cost / person", cpp!=null?"$"+nf.format(Math.round(cpp)):"—")+
   "</tbody></table>";
   h+="<h2>How it compares</h2><p>Based on <b>"+rows.length+"</b> comparable programmes — "+esc(scope)+". These are what similar programmes <b>cost</b>, not what yours should — context, not a target.</p>";
   h+="<table class='brief-t brief-cmp'><thead><tr><th></th><th>Typical (median)</th><th>Middle 50%</th><th>Your plan</th></tr></thead><tbody>"+
-    briefCmp("Budget", fmtCompact(b.med), fmtCompact(b.p25)+"–"+fmtCompact(b.p75), budget!=null?fmtCompact(budget)+" · "+ord(Math.round(bp*100))+" pct":"—")+
+    briefCmp("Budget", fmtUSD(b.med), fmtUSD(b.p25)+"–"+fmtUSD(b.p75), budget!=null?fmtUSD(budget)+" · "+ord(Math.round(bp*100))+" pct":"—")+
     briefCmp("Duration", d.med==null?"—":Math.round(d.med)+" mo", (d.p25==null?"—":Math.round(d.p25)+"–"+Math.round(d.p75)+" mo"), dur!=null?dur+" mo · "+ord(Math.round(dp*100))+" pct":"—")+
-    briefCmp("Monthly burn", fmtCompact(bn.med)+"/mo", fmtCompact(bn.p25)+"–"+fmtCompact(bn.p75)+"/mo", burn!=null?fmtCompact(burn)+"/mo · "+ord(Math.round(burnp*100))+" pct":"—")+
+    briefCmp("Monthly burn", fmtUSD(bn.med)+"/mo", fmtUSD(bn.p25)+"–"+fmtUSD(bn.p75)+"/mo", burn!=null?fmtUSD(burn)+"/mo · "+ord(Math.round(burnp*100))+" pct":"—")+
   "</tbody></table>";
   if(conc) h+="<p class='brief-warn'>⚠ "+esc(conc.msg)+"</p>";
   if(ach) h+="<p>Reality check: comparable programmes reported a median actual of <b>"+Math.round(ach.med*100)+"%</b> of target ("+ach.n+" indicators); "+Math.round(ach.hit100*100)+"% met target in full. Design to expected actuals.</p>";
