@@ -85,6 +85,8 @@ Database/
 ├── js/
 │   ├── lib.js         # pure helpers (median, quantile, fmt*, esc…) —
 │   │                  #   browser globals + Node module (tested)
+│   ├── i18n.js        # English translations for non-English outcome labels
+│   │                  #   (applied at render via i18n(); data.js unchanged)
 │   ├── data.js        # embedded dataset: PROGRAMS, OUTCOMES, RATES,
 │   │                  #   TOTALS, DEVREGION, DEFLATOR, META (globals)
 │   └── app.js         # all application logic (vanilla JS, no framework)

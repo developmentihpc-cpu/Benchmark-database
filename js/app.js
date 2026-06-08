@@ -51,7 +51,7 @@ function filterPrograms(){ const q=PS.q.toLowerCase(); return PROGRAMS.filter(p=
   return true; }); }
 function filterOutcomes(){ const q=OS.q.toLowerCase(); return OUTCOMES.filter(o=>{
   if(OS.s&&o.s!==OS.s) return false; if(OS.sn&&o.sn!==OS.sn) return false; if(OS.t&&o.t!==OS.t) return false;
-  if(q&&!((o.n||"").toLowerCase().includes(q)||(o.i||"").toLowerCase().includes(q))) return false;
+  if(q&&!(((o.n||"")+" "+(o.i||"")+" "+i18n(o.n||"")+" "+i18n(o.i||"")).toLowerCase().includes(q))) return false;
   return true; }); }
 function sortRows(rows,key,dir){ return rows.slice().sort((a,b)=>{
   let x=a[key],y=b[key]; const xn=(x==null),yn=(y==null);
@@ -144,8 +144,8 @@ function renderOutcomes(){
   const pages=Math.max(1,Math.ceil(total/OS.size)); if(OS.page>pages) OS.page=pages;
   const start=(OS.page-1)*OS.size, slice=rows.slice(start,start+OS.size);
   document.getElementById("ob").innerHTML=slice.map(o=>{ const m=(o.m==="%")?"%":""; const pi=PROG_BY_NAME[o.n];
-    return "<tr"+(pi!=null?" class='crow-click' data-i='"+pi+"'":"")+"><td class='c-name'>"+esc(o.n)+(pi!=null?" <span class='rowmore'>open ›</span>":"")+"</td><td class='c-tag'>"+esc(o.s)+"</td><td class='c-tag'>"+esc(o.sn)+"</td>"+
-     "<td class='c-tag'>"+esc(o.t)+"</td><td class='c-ind'>"+esc(o.i)+"</td>"+
+    return "<tr"+(pi!=null?" class='crow-click' data-i='"+pi+"'":"")+"><td class='c-name'>"+esc(i18n(o.n))+(pi!=null?" <span class='rowmore'>open ›</span>":"")+"</td><td class='c-tag'>"+esc(o.s)+"</td><td class='c-tag'>"+esc(o.sn)+"</td>"+
+     "<td class='c-tag'>"+esc(o.t)+"</td><td class='c-ind'>"+esc(i18n(o.i))+"</td>"+
      "<td class='c-num rep'>"+(o.bl==null?"—":nf.format(o.bl)+m)+"</td>"+
      "<td class='c-num rep'>"+(o.tg==null?"—":nf.format(o.tg)+m)+"</td>"+
      "<td class='c-num rep'>"+(o.ac==null?"—":nf.format(o.ac)+m)+"</td>"+
@@ -209,7 +209,7 @@ function exportPrograms(){ const rows=sortRows(filterPrograms(),PS.sort,PS.dir);
 function exportOutcomes(){ const rows=sortRows(filterOutcomes(),OS.sort,OS.dir);
   const head=["Programme","Stream","Sector","Type","Indicator","Measure","Baseline","Target","Actual","Achieved (act/tgt)"];
   const L=[head.map(cc).join(",")];
-  rows.forEach(o=>L.push([o.n,o.s,o.sn,o.t,o.i,o.m,o.bl,o.tg,o.ac,(o._ach==null?"":o._ach.toFixed(3))].map(cc).join(",")));
+  rows.forEach(o=>L.push([i18n(o.n),o.s,o.sn,o.t,i18n(o.i),o.m,o.bl,o.tg,o.ac,(o._ach==null?"":o._ach.toFixed(3))].map(cc).join(",")));
   dl("benchmark_outcomes_filtered.csv",L.join("\n")); }
 
 function buildFX(){ const wrap=document.getElementById("fx"); if(!wrap) return; const keys=Object.keys(RATES);
@@ -488,7 +488,7 @@ function openCard(p){ if(!p) return;
   if(p.rc&&p.rb) rr+=cf("Reach indicator",esc(p.rb));
   rr+=cf("Reports results?",p.re?"Yes":"No");
   h+="<div class='cardsec'><h3>Reach &amp; results</h3><div class='cardgrid'>"+rr+"</div>";
-  if(os.length) h+="<table class='cotable'><thead><tr><th>Indicator</th><th>Base</th><th>Target</th><th>Actual</th></tr></thead><tbody>"+os.slice(0,12).map(o=>"<tr><td class='ind'>"+esc(o.i||o.t||"—")+"</td><td>"+fnum(o.bl)+"</td><td>"+fnum(o.tg)+"</td><td>"+fnum(o.ac)+"</td></tr>").join("")+"</tbody></table>";
+  if(os.length) h+="<table class='cotable'><thead><tr><th>Indicator</th><th>Base</th><th>Target</th><th>Actual</th></tr></thead><tbody>"+os.slice(0,12).map(o=>"<tr><td class='ind'>"+esc(i18n(o.i)||o.t||"—")+"</td><td>"+fnum(o.bl)+"</td><td>"+fnum(o.tg)+"</td><td>"+fnum(o.ac)+"</td></tr>").join("")+"</tbody></table>";
   h+="</div>";
   h+="<div class='cardsec'><h3>Source</h3><div class='csrc'>"+
      "<div class='csrc-row'><a class='cbtn prim' href=\""+eatt(dpAct)+"\" target='_blank' rel='noopener'>Open in d-portal ↗</a>"+
