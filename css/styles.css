@@ -184,9 +184,16 @@ a[target]{color:var(--accent-ink);font-weight:500}
 .btable .grid{min-width:0}
 .btable .grid thead th{position:static;background:var(--panel2)}
 .b-lab{font-weight:600;display:flex;align-items:center;gap:8px;min-width:200px}
-.bar-cell{position:relative;min-width:150px}
-.bar{position:absolute;left:10px;top:50%;transform:translateY(-50%);height:7px;border-radius:4px;background:linear-gradient(90deg,var(--bar-a),var(--bar-b))}
-.bv{position:relative;font-weight:600}
+.bcell{min-width:210px;vertical-align:middle}
+.bcell-in{display:flex;align-items:center;gap:11px}
+.bstrip{position:relative;flex:1;min-width:70px;height:8px;background:var(--panel2);border:1px solid var(--line);border-radius:5px}
+.bstrip-band{position:absolute;top:-1px;bottom:-1px;background:color-mix(in srgb,var(--accent) 28%,transparent);border-radius:5px;min-width:3px}
+.bstrip-med{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--accent);border-radius:1px}
+.bcell .bv{flex:none;width:58px;text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+.bt-h-sub{display:block;font-weight:400;font-size:9px;color:var(--faint);text-transform:none;letter-spacing:0;margin-top:1px}
+.bt-scale{font-size:11px;color:var(--text2);padding:11px 18px 3px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.bt-band-key{display:inline-block;width:18px;height:8px;border-radius:4px;background:color-mix(in srgb,var(--accent) 28%,transparent);vertical-align:middle}
+.bt-med-key{display:inline-block;width:2px;height:11px;background:var(--accent);vertical-align:middle;margin-left:4px}
 .btable .dim{color:var(--faint)}
 .bnote{font-size:12px;color:var(--text2);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:13px 15px}
 .bnote b{color:var(--text)}

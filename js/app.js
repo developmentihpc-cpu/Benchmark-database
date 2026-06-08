@@ -158,24 +158,31 @@ function renderOutcomes(){
   renderHead("oh",OCOLS,OS); syncURL();
 }
 
-function groupStats(fn){ const r=PROGRAMS.filter(fn); return {n:r.length,mb:median(r.map(x=>x._usd)),md:median(r.map(x=>x._dur)),
+function groupStats(fn){ const r=PROGRAMS.filter(fn); const b=statsOf(r,"_usd"); return {n:r.length,mb:b.med,b25:b.p25,b75:b.p75,md:median(r.map(x=>x._dur)),
   pr:r.length?r.filter(x=>x.re).length/r.length:null}; }
 function btable(title,sub,desc,specs,labelHdr,showTotal,showDot){
-  const stats=specs.map(s=>{const g=groupStats(s.fn); return {lab:s.lab,total:s.total,n:g.n,mb:g.mb,md:g.md,pr:g.pr};});
-  const maxB=Math.max(1,...stats.map(s=>s.mb||0));
+  const stats=specs.map(s=>{const g=groupStats(s.fn); return {lab:s.lab,total:s.total,n:g.n,mb:g.mb,b25:g.b25,b75:g.b75,md:g.md,pr:g.pr};});
+  const vals=[]; stats.forEach(s=>[s.b25,s.mb,s.b75].forEach(v=>{ if(typeof v==="number"&&v>0) vals.push(v); }));
+  const lo=vals.length?Math.min(...vals):1, hi=vals.length?Math.max(...vals):10;
+  const la=Math.log(Math.max(1,lo)), lb=Math.log(Math.max(2,hi)), span=(lb-la)||1;
+  const pos=v=>(v==null||v<=0)?null:Math.max(0,Math.min(100,100*(Math.log(Math.max(1,v))-la)/span));
   let h="<div class='btable'><div class='bt-cap'><span>"+esc(title)+"</span><em>"+esc(sub)+"</em></div>"+
    (desc?"<p class='bt-desc'>"+esc(desc)+"</p>":"")+
    "<table class='grid'><thead><tr><th>"+esc(labelHdr)+"</th><th class='c-num'>n</th>"+
-   "<th class='c-num'>Median budget &asymp;USD</th><th class='c-num'>Median dur (mo)</th><th class='c-num'>% results</th>"+
+   "<th>Budget &asymp;USD <span class='bt-h-sub'>median + middle 50%</span></th><th class='c-num'>Median dur (mo)</th><th class='c-num'>% results</th>"+
    (showTotal?"<th class='c-num'>In IATI</th>":"")+"</tr></thead><tbody>";
-  stats.forEach(s=>{ const w=s.mb?Math.max(3,Math.round(100*s.mb/maxB)):0;
+  stats.forEach(s=>{ const a=pos(s.b25),c=pos(s.b75),m=pos(s.mb);
+   const cell=(m==null)?"<span class='muted'>—</span>":
+     "<span class='bstrip'>"+((a!=null&&c!=null)?"<span class='bstrip-band' style='left:"+Math.min(a,c)+"%;width:"+Math.max(2,Math.abs(c-a))+"%'></span>":"")+"<span class='bstrip-med' style='left:"+m+"%'></span></span>"+
+     "<span class='bv' title='median "+esc(fmtUSD(s.mb))+(s.b25!=null?" · middle 50% "+esc(fmtUSD(s.b25))+"–"+esc(fmtUSD(s.b75)):"")+"'>"+fmtCompact(s.mb)+"</span>";
    h+="<tr><td class='c-name b-lab'>"+(showDot?"<i class='cdot' style='background:"+(DONOR_COLORS[s.lab]||"#8A98A3")+"'></i>":"")+esc(s.lab)+"</td>"+
      "<td class='c-num'>"+s.n+"</td>"+
-     "<td class='c-num bar-cell'><span class='bar' style='width:"+w+"%'></span><span class='bv'>"+fmtCompact(s.mb)+"</span></td>"+
+     "<td class='bcell'><div class='bcell-in'>"+cell+"</div></td>"+
      "<td class='c-num'>"+(s.md==null?"—":s.md)+"</td>"+
      "<td class='c-num'>"+fmtPct(s.pr)+"</td>"+
      (showTotal?"<td class='c-num dim'>"+fmtNum(s.total)+"</td>":"")+"</tr>"; });
-  return h+"</tbody></table></div>";
+  h+="</tbody></table><p class='bt-scale'>Budget axis: log scale "+fmtCompact(lo)+" – "+fmtCompact(hi)+" (this table) · <span class='bt-band-key'></span> middle 50% · <span class='bt-med-key'></span> median</p>";
+  return h+"</div>";
 }
 function renderBenchmarks(){
   const el=document.getElementById("bench"); if(!el) return;
@@ -197,7 +204,7 @@ function renderBenchmarks(){
       reg,"Region",false,false)+
     btable("E \u00b7 By providing country","inferred funder country \u2014 bilateral & co-funded; top 12 by count","Indicative typical programme size per funding government, for bilateral and co-funded programmes (top 12 by count). Provider country is inferred from the funder/reporter, so treat as approximate.",
       prov,"Providing country",false,false)+
-    "<p class='bnote'>Computed live over the "+nf.format(PROGRAMS.length)+" embedded programmes (a global sample; the recent IATI universe per sector is larger — see the 'In IATI' column and #read_me). Bars scale to the largest median in each table. <b>Cost-per-beneficiary and aggregate achievement are intentionally absent</b> — IATI reach and target/actual fields are non-comparable.</p>";
+    "<p class='bnote'>Computed live over the "+nf.format(PROGRAMS.length)+" embedded programmes (a global sample; the recent IATI universe per sector is larger — see the 'In IATI' column and #read_me). Each budget strip shows the middle 50% of programmes (p25–p75) with the median marked, on a shared log scale per table. <b>Cost-per-beneficiary and aggregate achievement are intentionally absent</b> — IATI reach and target/actual fields are non-comparable.</p>";
 }
 
 function dl(name,text){ const b=new Blob([text],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(b),a=document.createElement("a"); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1500); }
