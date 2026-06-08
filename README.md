@@ -144,6 +144,38 @@ treatment of caveats.
 FX rates (`RATES` in `data.js`) are indicative, fixed, order-of-magnitude only —
 editable live in the #read_me view.
 
+## Data schema (data dictionary)
+
+`js/data.js` defines a few globals. Field names are short to keep the file small.
+
+**`PROGRAMS`** — one object per programme:
+
+| key | meaning | key | meaning |
+|-----|---------|-----|---------|
+| `n` | programme title | `b` | amount basis (`commitment`/`budget`) |
+| `d` | donor type (Bilateral/Multilateral/NGO/Foundation/Private sector) | `rc` | reported reach count (or null) |
+| `r` | reporting org name | `rb` | reach indicator label |
+| `rt` | reporting org type | `re` | reports results (0/1) |
+| `s` | stream (Humanitarian/WASH/Governance/Development) | `year` | start year |
+| `sc` | DAC 5-digit sector code | `fn` | funder name |
+| `sn` | sector name | `pcc` | providing-country ISO2 (bilateral, inferred) |
+| `co` | recipient country name | `pn` | providing-country name |
+| `cc` | recipient country ISO2 | `id` | IATI activity identifier |
+| `rg` | region | `desc` | English IATI activity description (added by enrich; optional) |
+| `sta` | status (Ongoing/Planned/Finalisation/Closed/Suspended/Cancelled) | `multi` | 1 if multi-country |
+| `st`,`en` | start/end date (ISO) | `c`,`a` | currency code, amount (original) |
+
+Derived at runtime (not stored): `_dur` (months), `_usd` (≈USD via FX×CPI),
+`_i` (original index).
+
+**`OUTCOMES`** — indicator rows: `n` (programme title, links to `PROGRAMS.n`),
+`s` stream, `sn` sector, `t` type (output/outcome), `i` indicator label,
+`m` measure, `bl`/`tg`/`ac` baseline/target/actual. Derived: `_ach` = `ac/tg`.
+
+**Other globals:** `RATES` (currency→USD), `TOTALS` (recent IATI universe per
+sector), `DEVREGION` (country→region), `DEFLATOR` (US CPI by year, base 2024),
+`META` (date + counts).
+
 ## Enriching descriptions
 
 Each programme card shows a plain-language summary of **what the programme

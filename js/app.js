@@ -1,6 +1,13 @@
 /* Benchmark DB — application logic (vanilla JS, in-memory only). */
 
 /* ---------- Benchmark database app (vanilla, in-memory only) ---------- */
+if(typeof PROGRAMS==="undefined"||typeof OUTCOMES==="undefined"){
+  addEventListener("DOMContentLoaded",function(){ document.body.innerHTML=
+    "<div style='font-family:system-ui,sans-serif;max-width:560px;margin:14vh auto;padding:28px;text-align:center;color:#33424f'>"+
+    "<h1 style='font-weight:600;font-size:22px'>Couldn’t load the dataset</h1>"+
+    "<p style='line-height:1.6'>The data file (<code>js/data.js</code>) didn’t load. If you opened this page directly from disk, serve it over HTTP instead — see the README — or check that <code>js/data.js</code> is present.</p></div>"; });
+  throw new Error("Benchmark DB: js/data.js failed to load (PROGRAMS/OUTCOMES undefined)");
+}
 const DONOR_COLORS={Bilateral:"#4F7CA3",Multilateral:"#2E8B86",NGO:"#C2683E",
   Foundation:"#8E5BA6","Private sector":"#6B7785",Private:"#6B7785",Academic:"#7E8A6F",Other:"#98A0A8",PPP:"#5FB0AB"};
 const SECTORS=["Emergency response","Basic drinking water","Public sector policy & PFM",
