@@ -252,10 +252,14 @@ function renderMeta(){ const np=PROGRAMS.length, nc=uniq(PROGRAMS,"co").length, 
   set("m-nprog",nf.format(np)); set("f-nprog",nf.format(np));
   set("m-ncountry",nc); set("f-ncountry",nc); set("m-ncountry2",nc); set("f-nout",nf.format(no)); }
 function renderUniverse(){ const tb=document.getElementById("iati-universe"); if(!tb) return;
-  const snStream={}; PROGRAMS.forEach(p=>{ if(p.sn&&!(p.sn in snStream)) snStream[p.sn]=p.s; });
+  const snStream={}, snCount={};
+  PROGRAMS.forEach(p=>{ if(p.sn){ if(!(p.sn in snStream)) snStream[p.sn]=p.s; snCount[p.sn]=(snCount[p.sn]||0)+1; } });
   tb.innerHTML=SECTORS.map(function(s){ const t=TOTALS[s]||{};
-    const st=t.stream||snStream[s]||"—", rt=(t.recent_total!=null)?nf.format(t.recent_total):"—";
-    return "<tr><td>"+esc(s)+"</td><td>"+esc(st)+"</td><td class='c-num'>"+rt+"</td></tr>"; }).join(""); }
+    const st=t.stream||snStream[s]||"—";
+    const samp=snCount[s]||0, uni=t.recent_total;
+    const cov=(uni!=null&&uni>0)?Math.min(100,Math.round(100*samp/uni))+"%":"—";
+    return "<tr><td>"+esc(s)+"</td><td>"+esc(st)+"</td><td class='c-num'>"+nf.format(samp)+"</td>"+
+      "<td class='c-num'>"+(uni!=null?nf.format(uni):"—")+"</td><td class='c-num'>"+cov+"</td></tr>"; }).join(""); }
 
 /* ---------- data quality / coverage ---------- */
 function dqTile(k,v,s){ return "<div class='dqcard'><div class='dq-k'>"+esc(k)+"</div><div class='dq-v'>"+v+"</div><div class='dq-s'>"+esc(s)+"</div></div>"; }

@@ -155,8 +155,9 @@
    <div id="dq" class="dqgrid"></div>
    <h2>FX rates — indicative (≈USD per unit), editable</h2>
    <div id="fx" class="fxgrid"></div>
-   <h2>Recent IATI universe by sector (started since 2021-06-02)</h2>
-   <table class="mtable"><thead><tr><th>Sector</th><th>Stream</th><th class="c-num">Recent total</th></tr></thead><tbody id="iati-universe"></tbody></table>
+   <h2>Sample calibration — how representative is this sample?</h2>
+   <p class="muted">For each sector: how many programmes are in this embedded sample vs the recent IATI universe it is drawn from, and the resulting coverage. The universe counts come from the official IATI Datastore (run <code>datastore_totals.py</code> with a free key); until then they show &ldquo;&mdash;&rdquo;. Coverage well under 100% is expected — this is a representative sample, not a census.</p>
+   <table class="mtable"><thead><tr><th>Sector</th><th>Stream</th><th class="c-num">In sample</th><th class="c-num">Recent IATI</th><th class="c-num">Coverage</th></tr></thead><tbody id="iati-universe"></tbody></table>
    <h2>Refresh &amp; extend</h2>
    <p>Regenerate with the Python pipeline: <b>setup_geo.py</b> builds the developing-country + region reference from the World Bank API, <b>pull.py</b> fetches and classifies (edit the sector list and caps at the top), <b>build_html.py</b> rebuilds this page. For production, point pull.py at the official IATI v3 datastore with a free API key instead of the no-key mirror.</p>
   </div>

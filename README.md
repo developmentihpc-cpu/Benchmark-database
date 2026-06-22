@@ -353,9 +353,45 @@ python datastore_totals.py --dry-run   # print the counts; write nothing
 
 It queries the recent activity count (started since 2021-06-02 or ongoing — the
 same basis as the sample) for every sector in `js/data.js` and writes it into
-`TOTALS`. The Datastore is also the robust way to **pull by sector** if you extend
-the pipeline — it returns `recipient_country_code` / `sector_code` as flat fields,
-no per-activity fetches.
+`TOTALS`.
+
+### Bigger / cleaner sample from the Datastore
+
+[`datastore_pull.py`](datastore_pull.py) is the robust alternative to
+`add_sector.py`: because d-portal can't filter by sector and needs a slow
+per-activity fetch, this uses the IATI Datastore's exact `sector_code` filter and
+flat fields (recipient country, sector, dates, currency, budget) to top each
+sector toward a target sample size in **one query per sector** — far faster and
+exact. Same free key:
+
+```sh
+export IATI_DATASTORE_KEY=...
+python datastore_pull.py                 # top every in-data sector toward --target (60)
+python datastore_pull.py --codes 23210,11320 --target 80
+python datastore_pull.py --dry-run
+```
+
+### Sample calibration (#read_me)
+
+The #read_me view shows a **calibration table**: for each sector, how many
+programmes are in this embedded sample vs the recent IATI universe it's drawn
+from, and the resulting **coverage %**. It answers "how representative is this
+sample?" — coverage well under 100% is expected and honest (it's a sample, not a
+census). The universe column fills once `datastore_totals.py` has run.
+
+### Outcome / results data
+
+The #read_me view also depends on indicator-level baseline → target → actual rows
+(the `OUTCOMES` global). Beyond the original sample, results are mined from the
+IATI `<result>` elements of results-publishing donors (World Bank, ADB, …) and
+linked to their programmes, deduplicated, keeping only indicators with a real
+target or actual. Activities with empty placeholder results are skipped.
+
+Both [`add_uae.py`](add_uae.py) and `add_sector.py` share one ingestion core,
+[`iati_ingest.py`](iati_ingest.py) — IATI→schema classification (stream, donor
+type from the publisher's org type, region, status, currency) and the idempotent
+`js/data.js` splice. Nothing is fabricated: an activity with no recipient country
+or no DAC sector is reported and dropped, never guessed.
 
 Both [`add_uae.py`](add_uae.py) and `add_sector.py` share one ingestion core,
 [`iati_ingest.py`](iati_ingest.py) — IATI→schema classification (stream, donor
