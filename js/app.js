@@ -185,7 +185,7 @@ function btable(title,sub,desc,specs,labelHdr,showTotal,showDot){
   const lo=vals.length?Math.min(...vals):1, hi=vals.length?Math.max(...vals):10;
   const la=Math.log(Math.max(1,lo)), lb=Math.log(Math.max(2,hi)), span=(lb-la)||1;
   const pos=v=>(v==null||v<=0)?null:Math.max(0,Math.min(100,100*(Math.log(Math.max(1,v))-la)/span));
-  let h="<div class='btable'><div class='bt-cap'><span>"+esc(title)+"</span><em>"+esc(sub)+"</em></div>"+
+  let h="<details class='btable' open><summary class='bt-cap'><span>"+esc(title)+"</span><em>"+esc(sub)+"</em></summary>"+
    (desc?"<p class='bt-desc'>"+esc(desc)+"</p>":"")+
    "<table class='grid'><thead><tr><th>"+esc(labelHdr)+"</th><th class='c-num'>n</th>"+
    "<th>Budget &asymp;USD <span class='bt-h-sub'>median + middle 50%</span></th><th class='c-num'>Median dur (mo)</th><th class='c-num'>% results</th>"+
@@ -202,7 +202,7 @@ function btable(title,sub,desc,specs,labelHdr,showTotal,showDot){
      "<td class='c-num'>"+fmtPct(s.pr)+"</td>"+
      (showTotal?"<td class='c-num dim'>"+fmtNum(s.total)+"</td>":"")+"</tr>"; });
   h+="</tbody></table><p class='bt-scale'>Budget axis: log scale "+fmtCompact(lo)+" – "+fmtCompact(hi)+" (this table) · <span class='bt-band-key'></span> middle 50% · <span class='bt-med-key'></span> median</p>";
-  return h+"</div>";
+  return h+"</details>";
 }
 function renderBenchmarks(){
   const el=document.getElementById("bench"); if(!el) return;
@@ -814,6 +814,13 @@ function renderCountry(){
     "<div class='cp-panel'><h3>By sector</h3>"+cyBars(secs,"sector")+"</div>"+
     "<div class='cp-panel'><h3>By donor type</h3>"+cyBars(donors,"donor")+(provs.length?"<h3 class='cp-h2'>Top providing countries <span class='cp-inf'>(inferred)</span></h3>"+cyBars(provs,"prov"):"")+"</div></div>";
   h+="<div class='cp-panel'><h3>Recent programmes</h3>"+recent.map(p=>"<div class='cp-prog crow-click' data-i='"+p._i+"' tabindex='0' role='button' aria-label='Open programme details'><span class='pcn'>"+esc(pName(p))+"</span><span class='pcm'>"+esc(p.sn)+" · "+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+esc(p.st||"—")+" · <span class='rowmore'>open ›</span></span></div>").join("")+"</div>";
+  h+="<div class='cp-panel'><h3>Programmes by sector</h3>"+secs.map(function(sec){
+      const list=secMap[sec.l].slice().sort((a,b)=>(b._usd||0)-(a._usd||0));
+      const mb=fmtCompact(median(secMap[sec.l].map(x=>x._usd)));
+      return "<details class='cp-secgroup'><summary><span class='cp-sg-name'>"+esc(sec.l)+"</span><span class='cp-sg-meta'>"+sec.v+" programme"+(sec.v>1?"s":"")+" · median "+mb+"</span></summary>"+
+        list.map(p=>"<div class='cp-prog crow-click' data-i='"+p._i+"' tabindex='0' role='button' aria-label='Open programme details'><span class='pcn'>"+esc(pName(p))+"</span><span class='pcm'>"+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+(p._dur==null?"—":p._dur+" mo")+" · "+esc(p.st||"—")+" · <span class='rowmore'>open ›</span></span></div>").join("")+
+      "</details>";
+    }).join("")+"</div>";
   h+="</div>";
   el.innerHTML=h;
   const g=document.getElementById("cy-grid"); if(g) g.addEventListener("click",()=>{ Object.assign(PS,{q:"",d:"",rg:"",co:CY.country,sc:"",sta:"",re:"",prov:"",page:1}); reflectControls(); showView("programmes"); renderPrograms(); });

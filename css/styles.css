@@ -182,6 +182,12 @@ a[target]{color:var(--accent-ink);font-weight:500}
 .bt-cap{display:flex;align-items:baseline;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
 .bt-cap span{font-family:var(--serif);font-weight:600;font-size:16px}
 .bt-cap em{font-style:normal;color:var(--text2);font-size:12px}
+summary.bt-cap{cursor:pointer;list-style:none;user-select:none}
+summary.bt-cap::-webkit-details-marker{display:none}
+summary.bt-cap::before{content:"▾";color:var(--text2);font-size:11px;margin-right:2px;transition:transform .15s}
+details.btable:not([open]) summary.bt-cap{border-bottom:0}
+details.btable:not([open]) summary.bt-cap::before{display:inline-block;transform:rotate(-90deg)}
+summary.bt-cap:hover span{color:var(--accent-ink)}
 .bt-desc{margin:0;padding:12px 18px;color:var(--text2);font-size:12.5px;line-height:1.55;border-bottom:1px solid var(--line)}
 .btable .grid{min-width:0}
 .btable .grid thead th{position:static;background:var(--panel2)}
@@ -395,6 +401,16 @@ svg.chart .cpt{fill:var(--accent);opacity:.4}
 .cp-prog .pcn{display:block;font-weight:500}
 .cp-prog .pcm{display:block;color:var(--text2);font-size:11.5px;margin-top:2px}
 .cp-prog:hover .pcn{color:var(--accent-ink)}
+.cp-secgroup{border-top:1px solid var(--line)}
+.cp-secgroup:first-of-type{border-top:0}
+.cp-secgroup>summary{cursor:pointer;list-style:none;user-select:none;display:flex;align-items:center;gap:8px;padding:10px 0}
+.cp-secgroup>summary::-webkit-details-marker{display:none}
+.cp-secgroup>summary::before{content:"▸";color:var(--text2);font-size:10px;transition:transform .15s;flex:0 0 auto}
+.cp-secgroup[open]>summary::before{transform:rotate(90deg)}
+.cp-secgroup>summary:hover .cp-sg-name{color:var(--accent-ink)}
+.cp-sg-name{font-weight:500}
+.cp-sg-meta{color:var(--text2);font-size:11.5px;margin-left:auto;text-align:right}
+.cp-secgroup .cp-prog{padding:7px 0 7px 18px;border-top:1px solid var(--line)}
 @media(max-width:980px){.charts{grid-template-columns:1fr}.cp-stats{grid-template-columns:1fr 1fr}.cp-grid2{grid-template-columns:1fr}}
 
 /* ---------- Tier 2: a11y, sticky first column, mobile ---------- */
