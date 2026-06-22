@@ -35,7 +35,9 @@ function fxNote(p){ const r=RATES[p.c]; if(typeof r!=="number") return "no FX ra
 
 PROGRAMS.forEach(p=>{ p._dur=durMonths(p.st,p.en); });
 OUTCOMES.forEach(o=>{ o._ach=(typeof o.tg==="number"&&o.tg>0&&typeof o.ac==="number")?o.ac/o.tg:null; });
-function recomputeUSD(){ PROGRAMS.forEach(p=>{ p._usd=usdOf(p); }); }
+const AGG_USD=2e9;   // a single "programme" above this is a facility/portfolio total, not a discrete activity
+function recomputeUSD(){ PROGRAMS.forEach(p=>{ p._usd=usdOf(p);
+  const x=RATES[p.c]; p._agg=(typeof x==="number"&&p.a>0&&p.a*x>AGG_USD); }); }
 recomputeUSD();
 PROGRAMS.forEach((p,i)=>{p._i=i;});
 const PROG_BY_NAME={}; PROGRAMS.forEach(p=>{ if(p.n!=null && !(p.n in PROG_BY_NAME)) PROG_BY_NAME[p.n]=p._i; });
@@ -123,7 +125,7 @@ function renderPrograms(){
      "<td class='c-dim'>"+esc(p.st||"—")+"</td>"+"<td class='c-dim'>"+esc(p.en||"—")+"</td>"+
      "<td class='c-num'>"+(p._dur==null?"—":p._dur)+"</td>"+
      "<td class='c-num rep'>"+esc(p.c)+" "+nf.format(Math.round(p.a))+"<span class='sub'>"+esc(p.b)+"</span></td>"+
-     "<td class='c-num strong' title='"+esc(fxNote(p))+"'>"+fmtUSD(p._usd)+"</td>"+
+     "<td class='c-num strong' title='"+esc(fxNote(p))+"'>"+fmtUSD(p._usd)+(p._agg?"<span class='aggtag' title='Facility / portfolio total — not a single programme; excluded from the charts'>facility</span>":"")+"</td>"+
      "<td class='c-num rep' title='"+esc(i18n(p.rb)||"")+"'>"+(p.rc===""||p.rc==null?"—":fmtNum(p.rc))+(p.rc&&p.rb?"<span class='sub'>"+esc((i18n(p.rb)||"").slice(0,24))+"</span>":"")+"</td>"+
      "<td class='c-mid'>"+(p.re?"<span class='pill ok'>yes</span>":"<span class='dash'>–</span>")+"</td>"+
      "<td class='c-mid'><span class='rowmore'>open ›</span></td></tr>";
@@ -192,8 +194,9 @@ function btable(title,sub,desc,specs,labelHdr,showTotal,showDot){
    const cell=(m==null)?"<span class='muted'>—</span>":
      "<span class='bstrip'>"+((a!=null&&c!=null)?"<span class='bstrip-band' style='left:"+Math.min(a,c)+"%;width:"+Math.max(2,Math.abs(c-a))+"%'></span>":"")+"<span class='bstrip-med' style='left:"+m+"%'></span></span>"+
      "<span class='bv' title='median "+esc(fmtUSD(s.mb))+(s.b25!=null?" · middle 50% "+esc(fmtUSD(s.b25))+"–"+esc(fmtUSD(s.b75)):"")+"'>"+fmtCompact(s.mb)+"</span>";
+   const thin=(s.n>0&&s.n<8);
    h+="<tr><td class='c-name b-lab'>"+(showDot?"<i class='cdot' style='background:"+(DONOR_COLORS[s.lab]||"#8A98A3")+"'></i>":"")+esc(s.lab)+"</td>"+
-     "<td class='c-num'>"+s.n+"</td>"+
+     "<td class='c-num'>"+s.n+(thin?" <span class='bt-thin' title='Fewer than 8 comparable programmes — treat this median as indicative'>⚠</span>":"")+"</td>"+
      "<td class='bcell'><div class='bcell-in'>"+cell+"</div></td>"+
      "<td class='c-num'>"+(s.md==null?"—":s.md)+"</td>"+
      "<td class='c-num'>"+fmtPct(s.pr)+"</td>"+
@@ -606,7 +609,7 @@ function openCard(p){ if(!p) return;
      ((_hasFull||_along)?"<button class='cmore' type='button'>Show more</button>":"")+
      "<span class='tagmini"+(progDescIsReal(p)?" rep":"")+"'>"+(progDescIsReal(p)?"reported — IATI activity description":"derived — inferred from sector &amp; reported indicators")+"</span></div>";
   h+="<div class='cardsec'><div class='cardgrid'>"+cf("Receiving country",esc(p.co)+(p.multi?" <span class='muted'>(+ others)</span>":""))+((p.d==="Bilateral")?cf("Providing country",(p.pn?esc(p.pn)+" <span class='muted'>("+esc(p.pcc)+", inferred)</span>":"—")):"")+cf("Funder",esc(i18n(p.fn||p.r)||"—"))+cf("Region",esc(p.rg))+cf("Reporting org",esc(i18n(p.r))+" <span class='muted'>("+esc(p.rt||"—")+")</span>")+cf("Sector code",esc(p.sc))+"</div></div>";
-  h+="<div class='cardsec'><h3>Finance &amp; timeline</h3><div class='cardgrid'>"+cfBig("Budget",esc(p.c)+" "+nf.format(Math.round(p.a)))+cfBig(BASIS==="real"?"≈ real 2024 USD":"≈ nominal USD",fmtUSD(p._usd))+cf("FX applied",esc(fxNote(p)))+cf("Reported as",esc(p.b||"—"))+cf("Start",esc(p.st||"—"))+cf("End",esc(p.en||"—"))+cf("Duration",(p._dur==null?"—":p._dur+" months"))+"</div></div>";
+  h+="<div class='cardsec'><h3>Finance &amp; timeline</h3><div class='cardgrid'>"+cfBig("Budget",esc(p.c)+" "+nf.format(Math.round(p.a)))+cfBig(BASIS==="real"?"≈ real 2024 USD":"≈ nominal USD",fmtUSD(p._usd))+cf("FX applied",esc(fxNote(p)))+cf("Reported as",esc(p.b||"—"))+cf("Start",esc(p.st||"—"))+cf("End",esc(p.en||"—"))+cf("Duration",(p._dur==null?"—":p._dur+" months"))+"</div>"+(p._agg?"<p class='cnote'>This budget exceeds $2bn — it appears to be a <b>facility or portfolio total</b> (e.g. a multi-donor trust fund), not a single programme. Shown for reference, but excluded from the charts so it doesn't distort the scale.</p>":"")+"</div>";
   let rr=cf("Reach (reported)",(p.rc===""||p.rc==null)?"—":fmtNum(p.rc));
   if(p.rc&&p.rb) rr+=cf("Reach indicator",esc(i18n(p.rb)));
   let resVal;
@@ -748,12 +751,13 @@ function svgScatter(pts,o){ o=o||{}; const W=o.w||540,H=o.h||250,pL=46,pR=12,pT=
 }
 function chartCard(t,s,svg,note){ return "<div class='chartcard'><h3>"+esc(t)+"</h3><p class='csub'>"+esc(s)+"</p>"+svg+(note?"<p class='cnote-chart'>"+esc(note)+"</p>":"")+"</div>"; }
 const CS={sc:"",rg:"",d:""};
-function chartRows(){ return PROGRAMS.filter(p=> (!CS.sc||p.sn===CS.sc) && (!CS.rg||p.rg===CS.rg) && (!CS.d||p.d===CS.d)); }
+function chartRows(){ return PROGRAMS.filter(p=> !p._agg && (!CS.sc||p.sn===CS.sc) && (!CS.rg||p.rg===CS.rg) && (!CS.d||p.d===CS.d)); }
 function renderCharts(){
   const el=document.getElementById("charts"); if(!el) return;
   const rows=chartRows(), usdLab=BASIS==="real"?"real 2024 USD":"nominal USD";
   const filtered=!!(CS.sc||CS.rg||CS.d);
-  setText("ch-count",fmtNum(rows.length)+(filtered?" of "+fmtNum(PROGRAMS.length):"")+" programmes");
+  const nagg=PROGRAMS.filter(p=>p._agg).length;
+  setText("ch-count",fmtNum(rows.length)+(filtered?" of "+fmtNum(PROGRAMS.length):"")+" programmes"+(nagg?" · "+nagg+" facility total"+(nagg>1?"s":"")+" excluded":""));
   const edges=[1e4,1e5,1e6,1e7,1e8,1e9],blab=["<10k","10k–100k","100k–1M","1M–10M","10M–100M","100M–1B",">1B"],bc=new Array(7).fill(0);
   rows.forEach(p=>{ if(p._usd==null)return; let bi=0; while(bi<edges.length&&p._usd>=edges[bi])bi++; bc[bi]++; });
   const c1=svgBars(blab.map((l,i)=>({l,v:bc[i]})),{});
