@@ -380,18 +380,18 @@ outside context. It answers "how representative is this sample?" — coverage we
 under 100% is expected and honest (it's a sample, not a census). The IATI universe
 column fills once `datastore_totals.py` has run.
 
-The **OECD-CRS column** is an outside reference: total recent ODA per sector from
-the OECD Creditor Reporting System (the authoritative all-DAC-donor aid record).
-CRS reports against DAC purpose codes — the same 5-digit codes used here — so it
-maps directly. It's a *different measure* (ODA US$, a broader reporter universe
-than IATI), shown for scale, not as a coverage denominator. Populate it with
-[`crs_calibration.py`](crs_calibration.py), which imports an OECD CRS CSV export
-(no key — just a 2-minute download from the OECD Data Explorer; auto-detects the
-sector/value/year columns):
+The **OECD-CRS column** is an outside reference: recent ODA per sector from the
+OECD Creditor Reporting System (the authoritative all-DAC-donor aid record). CRS
+reports against DAC purpose codes — the same 5-digit codes used here — so it maps
+directly. It's a *different measure* (annual ODA US$, a broader reporter universe
+than IATI), shown for scale, not as a coverage denominator. Refresh it with
+[`crs_calibration.py`](crs_calibration.py), which pulls straight from the **OECD
+SDMX API** (public, **no key**) — all DAC donors → developing countries, by
+sector, latest year:
 
 ```sh
-python crs_calibration.py --csv crs_export.csv      # writes the CRS global
-python crs_calibration.py --csv crs_export.csv --dry-run
+python crs_calibration.py            # fetch from OECD + write the CRS global
+python crs_calibration.py --dry-run  # print the figures; write nothing
 ```
 
 ### Outcome / results data

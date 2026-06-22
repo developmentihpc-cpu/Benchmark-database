@@ -1,153 +1,108 @@
 #!/usr/bin/env python3
-"""Populate the OECD-CRS column of the #read_me calibration table.
+"""Populate the OECD-CRS column of the #read_me calibration table — no key needed.
 
 The calibration table compares this sample against the recent IATI universe; this
-script adds an *outside* reference column — total recent ODA to each sector from
-the **OECD Creditor Reporting System (CRS)**, the authoritative record of all DAC
-donors' aid. CRS reports against **DAC purpose codes, which are exactly the
-5-digit sector codes used here**, so it maps directly.
+adds an *outside* reference column: recent ODA per sector from the **OECD Creditor
+Reporting System (CRS)**, the authoritative record of all DAC donors' aid. CRS
+reports against **DAC purpose codes — the same 5-digit codes used here** — so it
+maps directly.
 
-It reads an OECD CRS CSV export (no API key, just a download) and writes a `CRS`
-global into js/data.js keyed by sector name: { "Basic drinking water": {oda, year} }.
+It pulls straight from the **OECD SDMX API** (public, no key) — all DAC donors →
+developing countries, by sector, latest year — and writes a `CRS` global into
+js/data.js keyed by sector name: { "Basic drinking water": {oda, year} }.
 
-How to get the CSV (one-time, ~2 min):
-  1. OECD Data Explorer → "Creditor Reporting System (CRS)"
-     https://data-explorer.oecd.org/  (search "CRS")
-  2. Filter: Donor = "All donors, Total", Recipient = "Developing countries, Total"
-     (or a region), Measure = "Commitments", recent years (e.g. last 3).
-  3. Export → CSV (the "table" export with a sector/purpose-code column).
-  Or use the CRS bulk microdata file (has `sector_code` + `usd_commitment`).
+    python crs_calibration.py            # fetch + write
+    python crs_calibration.py --dry-run  # print the figures; write nothing
+    python crs_calibration.py --start 2021   # earliest year to consider
 
-    python crs_calibration.py --csv crs_export.csv
-    python crs_calibration.py --csv crs.csv --recent-years 3 --unit millions
-    python crs_calibration.py --csv crs.csv --dry-run
-
-The script auto-detects the sector-code, value and year columns; override with
---sector-col / --value-col / --year-col if your export uses different headers.
-Amounts are assumed to be USD **millions** (the CRS standard) unless --unit units.
+Amounts are OECD ODA in current US$ (the CRS values are USD millions; scaled to
+absolute USD here so the dashboard shows e.g. "$10.3B"). It's a different measure
+from the IATI activity counts — shown for scale, not as a coverage denominator.
 """
 import argparse
-import csv
 import json
 import re
 import sys
+import urllib.request
 from pathlib import Path
 
-from iati_ingest import DATA, SECTOR_NAME
+from iati_ingest import DATA
 
-CODE_RE = re.compile(r"^\d{5}$")
-SECTOR_HINTS = ["sector_code", "sector code", "purpose_code", "purpose code", "sector", "purpose", "crs"]
-VALUE_HINTS = ["usd_commitment", "obs_value", "value", "amount", "commitment", "usd"]
-YEAR_HINTS = ["year", "time_period", "time", "period"]
-
-
-def pick_column(fieldnames, hints, sample_rows=None, want_codes=False):
-    low = {f.lower().strip(): f for f in fieldnames}
-    for h in hints:
-        for lname, orig in low.items():
-            if h in lname:
-                return orig
-    # fall back: a column that mostly holds 5-digit codes (for the sector column)
-    if want_codes and sample_rows:
-        for f in fieldnames:
-            hits = sum(1 for r in sample_rows if CODE_RE.match((r.get(f) or "").strip()))
-            if hits >= max(1, len(sample_rows) // 2):
-                return f
-    return None
+# All DAC donors (DAC) -> developing countries (DPGC + unallocated), SECTOR open,
+# MEASURE 100 = ODA, current prices. dimensionAtObservation=AllDimensions.
+URL = ("https://sdmx.oecd.org/dcd-public/rest/data/OECD.DCD.FSD,DSD_CRS@DF_CRS,1.6/"
+       "DAC.DPGC+DPGC_X..100._T._T.D.Q._T..?startPeriod={start}&dimensionAtObservation=AllDimensions")
+HEADERS = {"Accept": "application/vnd.sdmx.data+json; charset=utf-8; version=1.0",
+           "User-Agent": "BenchmarkDB-crs/1.0"}
+MULT = 1_000_000   # CRS values are USD millions; the "USD" unit label omits the multiplier
 
 
-def num(s):
-    if s is None:
-        return None
-    s = str(s).replace(",", "").replace(" ", "").strip()
-    try:
-        return float(s)
-    except Exception:
-        return None
+def fetch(start):
+    req = urllib.request.Request(URL.format(start=start), headers=HEADERS)
+    with urllib.request.urlopen(req, timeout=120) as r:
+        return json.load(r)
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--csv", required=True, help="OECD CRS CSV export")
-    ap.add_argument("--recent-years", type=int, default=3, help="keep the latest N years present")
-    ap.add_argument("--unit", choices=["millions", "units"], default="millions",
-                    help="CRS amount unit (CRS standard is USD millions)")
-    ap.add_argument("--sector-col"); ap.add_argument("--value-col"); ap.add_argument("--year-col")
+    ap.add_argument("--start", type=int, default=2021, help="earliest year to consider")
+    ap.add_argument("--year", type=int, help="force a specific year (default: latest available)")
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
-    path = Path(args.csv)
-    if not path.exists():
-        sys.exit(f"CSV not found: {path}")
-    with path.open(newline="", encoding="utf-8-sig") as f:
-        rows = list(csv.DictReader(f))
-    if not rows:
-        sys.exit("CSV has no rows.")
-    fns = list(rows[0].keys())
-    sc_col = args.sector_col or pick_column(fns, SECTOR_HINTS, rows[:50], want_codes=True)
-    val_col = args.value_col or pick_column(fns, VALUE_HINTS)
-    yr_col = args.year_col or pick_column(fns, YEAR_HINTS)
-    if not sc_col or not val_col:
-        sys.exit(f"Could not detect columns. Found headers: {fns}\n"
-                 f"Pass --sector-col / --value-col explicitly.")
-    print(f"columns → sector: {sc_col!r}  value: {val_col!r}  year: {yr_col or '(none)'}")
+    try:
+        doc = fetch(args.start)
+    except Exception as e:
+        sys.exit(f"OECD SDMX fetch failed: {e}")
+    dims = doc["data"]["structure"]["dimensions"]["observation"]
+    sec_i = next(i for i, d in enumerate(dims) if d["id"] == "SECTOR")
+    time_i = next(i for i, d in enumerate(dims) if d["id"] == "TIME_PERIOD")
+    sec_vals = dims[sec_i]["values"]
+    time_vals = dims[time_i]["values"]
 
-    # determine the recent-year window
-    keep_years = None
-    if yr_col:
-        years = sorted({int(y) for r in rows if (y := re.match(r"\d{4}", str(r.get(yr_col) or "")))
-                        and (y := y.group())}, reverse=True)
-        keep_years = set(years[:args.recent_years]) if years else None
-        if keep_years:
-            print(f"recent years: {sorted(keep_years)}")
+    by_year = {}   # {year: {sector_code: usd_millions}}
+    for key, val in doc["data"]["dataSets"][0]["observations"].items():
+        if not val or val[0] is None:
+            continue
+        idx = key.split(":")
+        code = sec_vals[int(idx[sec_i])]["id"]
+        if not re.fullmatch(r"\d{5}", code):
+            continue
+        year = time_vals[int(idx[time_i])]["id"]
+        by_year.setdefault(year, {})[code] = by_year.get(year, {}).get(code, 0) + val[0]
 
-    # sector-name lookup: canonical names + whatever the data already uses
+    if not by_year:
+        sys.exit("No sector observations returned.")
+    use = str(args.year) if args.year else max(by_year, key=lambda y: int(y))
+    if use not in by_year:
+        sys.exit(f"Year {use} not in data ({sorted(by_year)}).")
+
+    # map purpose code -> the sector name the dataset uses
     src = DATA.read_text(encoding="utf-8")
     sn_map = {p["sc"]: p["sn"] for p in
               json.loads(re.search(r"const PROGRAMS=(\[[\s\S]*?\]);\s*const OUTCOMES=", src).group(1))
               if p.get("sc") and p.get("sn")}
-    name_for = lambda code: SECTOR_NAME.get(code) or sn_map.get(code)
-    in_data = set(sn_map.values()) | set(SECTOR_NAME.values())
+    crs = {}
+    for code, musd in by_year[use].items():
+        name = sn_map.get(code)
+        usd = musd * MULT
+        if name and usd > 0:
+            crs[name] = {"oda": int(usd), "year": int(use)}
 
-    mult = 1_000_000 if args.unit == "millions" else 1
-    agg, yrs = {}, {}
-    for r in rows:
-        code = (r.get(sc_col) or "").strip()
-        if not CODE_RE.match(code):
-            continue
-        if keep_years:
-            ym = re.match(r"\d{4}", str(r.get(yr_col) or ""))
-            if not ym or int(ym.group()) not in keep_years:
-                continue
-        name = name_for(code)
-        if not name or name not in in_data:
-            continue
-        v = num(r.get(val_col))
-        if v is None or v <= 0:
-            continue
-        agg[name] = agg.get(name, 0) + v * mult
-        if yr_col:
-            ym = re.match(r"\d{4}", str(r.get(yr_col) or ""))
-            if ym:
-                yrs.setdefault(name, set()).add(int(ym.group()))
+    print(f"OECD CRS {use}: mapped {len(crs)} sectors. Top:")
+    for name in sorted(crs, key=lambda n: -crs[n]["oda"])[:8]:
+        print(f"  {name:<34} ${crs[name]['oda']/1e9:,.2f}bn")
+    if args.dry_run or not crs:
+        print("[dry-run] nothing written." if args.dry_run else "Nothing to write."); return
 
-    CRS = {name: {"oda": round(v), "year": (f"{min(yrs[name])}-{max(yrs[name])}" if yrs.get(name)
-                  and len(yrs[name]) > 1 else (str(max(yrs[name])) if yrs.get(name) else None))}
-           for name, v in sorted(agg.items())}
-    print(f"\nAggregated CRS ODA for {len(CRS)} sectors. Sample:")
-    for name in list(CRS)[:8]:
-        print(f"  {name:<34} ${CRS[name]['oda']/1e9:,.2f}bn  ({CRS[name]['year']})")
-    if args.dry_run or not CRS:
-        print("[dry-run] nothing written." if args.dry_run else "No matching sectors."); return
-
-    block = json.dumps(CRS, ensure_ascii=False, separators=(",", ":"))
+    block = json.dumps(crs, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     if re.search(r"(?:const|let|var)\s+CRS\s*=\s*\{[\s\S]*?\};", src):
         src = re.sub(r"((?:const|let|var)\s+CRS\s*=\s*)\{[\s\S]*?\};", r"\g<1>" + block + ";", src, count=1)
     else:   # insert right after the TOTALS global
         src = re.sub(r"((?:const|let|var)\s+TOTALS\s*=\s*\{[\s\S]*?\};)",
                      r"\1\nconst CRS=" + block + ";", src, count=1)
     DATA.write_text(src, encoding="utf-8")
-    print(f"\nWrote CRS global ({len(CRS)} sectors) into {DATA}. The #read_me OECD column now fills.")
+    print(f"\nWrote CRS global ({len(crs)} sectors, year {use}) into {DATA}.")
 
 
 if __name__ == "__main__":
