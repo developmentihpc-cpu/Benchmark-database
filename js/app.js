@@ -113,7 +113,7 @@ function renderPrograms(){
   const pages=Math.max(1,Math.ceil(total/PS.size)); if(PS.page>pages) PS.page=pages;
   const start=(PS.page-1)*PS.size, slice=rows.slice(start,start+PS.size);
   document.getElementById("pb").innerHTML=slice.map(p=>{
-    return "<tr class='crow-click' data-i='"+p._i+"'>"+
+    return "<tr class='crow-click' data-i='"+p._i+"' tabindex='0' role='button' aria-label='Open details for "+esc(pName(p))+"'>"+
      "<td class='c-name'><span class='pname'>"+esc(pName(p))+"</span><span class='pid'>"+esc(i18n(p.r))+" · "+esc(p.sc)+"</span></td>"+
      "<td class='c-tag'"+(p.multi?" title='multiple recipient countries'":"")+">"+esc(p.co)+(p.multi?" <span class='multi'>+</span>":"")+"</td>"+
      "<td class='c-tag'>"+esc(p.rg)+"</td>"+
@@ -162,7 +162,7 @@ function renderOutcomes(){
   const pages=Math.max(1,Math.ceil(total/OS.size)); if(OS.page>pages) OS.page=pages;
   const start=(OS.page-1)*OS.size, slice=rows.slice(start,start+OS.size);
   document.getElementById("ob").innerHTML=slice.map(o=>{ const m=(o.m==="%")?"%":""; const pi=PROG_BY_NAME[o.n];
-    return "<tr"+(pi!=null?" class='crow-click' data-i='"+pi+"'":"")+"><td class='c-name'>"+esc(i18n(o.n))+(pi!=null?" <span class='rowmore'>open ›</span>":"")+"</td><td class='c-tag'>"+esc(o.s)+"</td><td class='c-tag'>"+esc(o.sn)+"</td>"+
+    return "<tr"+(pi!=null?" class='crow-click' data-i='"+pi+"' tabindex='0' role='button' aria-label='Open programme details'":"")+"><td class='c-name'>"+esc(i18n(o.n))+(pi!=null?" <span class='rowmore'>open ›</span>":"")+"</td><td class='c-tag'>"+esc(o.s)+"</td><td class='c-tag'>"+esc(o.sn)+"</td>"+
      "<td class='c-tag'>"+esc(o.t)+"</td><td class='c-ind'>"+esc(i18n(o.i))+"</td>"+
      "<td class='c-num rep'>"+(o.bl==null?"—":nf.format(o.bl)+m)+"</td>"+
      "<td class='c-num rep'>"+(o.tg==null?"—":nf.format(o.tg)+m)+"</td>"+
@@ -492,7 +492,7 @@ function buildPlanBrief(){
   "</tbody></table>";
   if(conc) h+="<p class='brief-warn'>⚠ "+esc(conc.msg)+"</p>";
   if(ach) h+="<p>Reality check: comparable programmes reported a median actual of <b>"+Math.round(ach.med*100)+"%</b> of target ("+ach.n+" indicators); "+Math.round(ach.hit100*100)+"% met target in full. Design to expected actuals.</p>";
-  h+="<footer class='brief-f'>Benchmark DB · IATI via d-portal · medians over an embedded sample in "+esc(usdBasisLabel())+" · indicative, not a census.</footer></div>";
+  h+="<footer class='brief-f'>Benchmark DB · IATI Standard via the IATI Datastore · medians over an embedded sample in "+esc(usdBasisLabel())+" · indicative, not a census.</footer></div>";
   el.innerHTML=h;
 }
 function wirePlan(){
@@ -582,7 +582,14 @@ function eatt(s){ return esc(s); }
 function cf(k,v){ return "<div class='cfield'><span class='ck'>"+k+"</span><span class='cv'>"+v+"</span></div>"; }
 function cfBig(k,v){ return "<div class='cfield'><span class='ck'>"+k+"</span><span class='cv big'>"+v+"</span></div>"; }
 function fnum(v){ return (v==null||v==="")?"—":fmtNum(v); }
-function closeCard(){ const m=document.getElementById("cardModal"); if(m) m.hidden=true; }
+let _cardLastFocus=null;
+function closeCard(){ const m=document.getElementById("cardModal"); if(!m||m.hidden) return; m.hidden=true;
+  if(_cardLastFocus&&_cardLastFocus.focus){ try{ _cardLastFocus.focus(); }catch(e){} } _cardLastFocus=null; }
+function trapCardTab(e){ const m=document.getElementById("cardModal"); if(!m||m.hidden||e.key!=="Tab") return;
+  const f=[...m.querySelectorAll('a[href],button:not([disabled]),input,[tabindex]:not([tabindex="-1"])')].filter(el=>el.offsetParent!==null);
+  if(!f.length) return; const first=f[0],last=f[f.length-1];
+  if(e.shiftKey&&document.activeElement===first){ e.preventDefault(); last.focus(); }
+  else if(!e.shiftKey&&document.activeElement===last){ e.preventDefault(); first.focus(); } }
 function fallbackCopy(txt,done){ try{ const ta=document.createElement("textarea"); ta.value=txt; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.focus(); ta.select(); document.execCommand("copy"); document.body.removeChild(ta); done&&done(); }catch(e){} }
 function copyText(txt,btn){ const done=()=>{ if(btn){ const o=btn.textContent; btn.textContent="Copied ✓"; setTimeout(()=>{btn.textContent=o;},1200);} };
   try{ if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done,()=>fallbackCopy(txt,done)); } else fallbackCopy(txt,done); }catch(e){ fallbackCopy(txt,done); } }
@@ -619,7 +626,10 @@ function openCard(p){ if(!p) return;
      "<div class='cnote'>If a link doesn't open in this preview, copy it into your browser. Every figure here is REPORTED or DERIVED from this activity's own IATI record.</div>"+
      "</div></div>";
   document.getElementById("cardBody").innerHTML=h;
-  const m=document.getElementById("cardModal"); m.hidden=false;
+  const m=document.getElementById("cardModal");
+  _cardLastFocus=document.activeElement;            // restore focus here on close
+  m.hidden=false;
+  const _x=m.querySelector(".cmodal-x"); if(_x) try{ _x.focus(); }catch(e){}
   m.querySelectorAll("[data-copy]").forEach(btn=>btn.addEventListener("click",()=>copyText(btn.getAttribute("data-copy"),btn)));
   m.querySelectorAll(".o-open").forEach(b=>b.addEventListener("click",()=>openOutcomesFor(b.getAttribute("data-name"))));
   const _more=m.querySelector(".cmore"); if(_more) _more.addEventListener("click",()=>{ const pEl=m.querySelector(".cabout"); const full=m.querySelector(".cabout-full");
@@ -736,7 +746,7 @@ function svgScatter(pts,o){ o=o||{}; const W=o.w||540,H=o.h||250,pL=46,pR=12,pT=
   pts.forEach(p=>{ if(!(p.x>0))return; const px=pL+iw*((Math.log10(p.x)-xmin)/span),py=pT+ih*(1-Math.min(1,p.y/ymax)); c+="<circle class='cpt' cx='"+px.toFixed(1)+"' cy='"+py.toFixed(1)+"' r='2.4'><title>"+esc(p.t||"")+"</title></circle>"; });
   return "<svg viewBox='0 0 "+W+" "+H+"' class='chart' preserveAspectRatio='xMidYMid meet'>"+g+c+"</svg>";
 }
-function chartCard(t,s,svg){ return "<div class='chartcard'><h3>"+esc(t)+"</h3><p class='csub'>"+esc(s)+"</p>"+svg+"</div>"; }
+function chartCard(t,s,svg,note){ return "<div class='chartcard'><h3>"+esc(t)+"</h3><p class='csub'>"+esc(s)+"</p>"+svg+(note?"<p class='cnote-chart'>"+esc(note)+"</p>":"")+"</div>"; }
 const CS={sc:"",rg:"",d:""};
 function chartRows(){ return PROGRAMS.filter(p=> (!CS.sc||p.sn===CS.sc) && (!CS.rg||p.rg===CS.rg) && (!CS.d||p.d===CS.d)); }
 function renderCharts(){
@@ -758,11 +768,16 @@ function renderCharts(){
     c4=svgHBars(bs,{}); c4t="By sector"; c4s="Within "+CS.rg+"; median budget on hover"; }
   else { const rc=REGIONS.map(rg=>{const r=rows.filter(p=>p.rg===rg);return {l:rg,v:r.length,s:"med "+fmtCompact(median(r.map(x=>x._usd))),disp:fmtNum(r.length)};}).filter(d=>d.v).sort((a,b)=>b.v-a.v);
     c4=svgHBars(rc,{}); c4t="By region"; c4s="Programme count; median budget on hover"; }
+  const npriced=rows.filter(p=>p._usd!=null).length, nexcl=rows.length-npriced;
   el.innerHTML=
-    chartCard("Budget distribution","Programmes by ≈USD band ("+usdLab+") — "+fmtNum(rows.filter(p=>p._usd!=null).length)+" priced",c1)+
-    chartCard("Programmes by start year","Count by reported start year",c2)+
-    chartCard("Budget vs duration","Each point a programme — log budget ("+usdLab+") × months",c3)+
-    chartCard(c4t,c4s,c4);
+    chartCard("Budget distribution","Programmes by ≈USD band ("+usdLab+") — "+fmtNum(npriced)+" priced",c1,
+      "Shows: how programme budgets are spread across orders of magnitude. Not: total spend — bars are counts of programmes, and "+fmtNum(nexcl)+" with no currency are excluded.")+
+    chartCard("Programmes by start year","Count by reported start year",c2,
+      "Shows: when sampled programmes started (≥2012). Not: funding over time, and recent years are partial — this is an IATI sample, not a census.")+
+    chartCard("Budget vs duration","Each point a programme — log budget ("+usdLab+") × months",c3,
+      "Shows: whether bigger budgets run longer (each dot a programme). Not: cost-effectiveness — no beneficiary or outcome dimension is implied.")+
+    chartCard(c4t,c4s,c4,
+      "Shows: programme counts by group (median budget on hover). Not: a ranking of need or aid volume — counts reflect what is published to IATI.");
 }
 
 /* ---------- Country profiles ---------- */
@@ -790,7 +805,7 @@ function renderCountry(){
   h+="<div class='cp-grid2'>"+
     "<div class='cp-panel'><h3>By sector</h3>"+cyBars(secs)+"</div>"+
     "<div class='cp-panel'><h3>By donor type</h3>"+cyBars(donors)+(provs.length?"<h3 class='cp-h2'>Top providing countries</h3>"+cyBars(provs):"")+"</div></div>";
-  h+="<div class='cp-panel'><h3>Recent programmes</h3>"+recent.map(p=>"<div class='cp-prog crow-click' data-i='"+p._i+"'><span class='pcn'>"+esc(pName(p))+"</span><span class='pcm'>"+esc(p.sn)+" · "+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+esc(p.st||"—")+" · <span class='rowmore'>open ›</span></span></div>").join("")+"</div>";
+  h+="<div class='cp-panel'><h3>Recent programmes</h3>"+recent.map(p=>"<div class='cp-prog crow-click' data-i='"+p._i+"' tabindex='0' role='button' aria-label='Open programme details'><span class='pcn'>"+esc(pName(p))+"</span><span class='pcm'>"+esc(p.sn)+" · "+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+esc(p.st||"—")+" · <span class='rowmore'>open ›</span></span></div>").join("")+"</div>";
   h+="</div>";
   el.innerHTML=h;
   const g=document.getElementById("cy-grid"); if(g) g.addEventListener("click",()=>{ Object.assign(PS,{q:"",d:"",rg:"",co:CY.country,sc:"",sta:"",re:"",prov:"",page:1}); reflectControls(); showView("programmes"); renderPrograms(); });
@@ -800,7 +815,7 @@ function renderCountry(){
 }
 
 
-function init(){
+function init(){ try {
   fillSelect("f-donor",DONORS.filter(d=>PROGRAMS.some(p=>p.d===d)),"All donor types");
   fillSelect("f-region",REGIONS.filter(r=>PROGRAMS.some(p=>p.rg===r)),"All regions");
   fillSelect("f-country",uniq(PROGRAMS,"co"),"All countries");
@@ -868,8 +883,11 @@ function init(){
   document.querySelectorAll(".nav-item").forEach(b=>b.addEventListener("click",()=>{showView(b.dataset.view);setNav(false);}));
   document.querySelectorAll(".theme-btn").forEach(b=>b.addEventListener("click",()=>setTheme(b.dataset.theme)));
   document.querySelectorAll(".basis-btn").forEach(b=>b.addEventListener("click",()=>setBasis(b.dataset.basis)));
-  const _m=document.getElementById("cardModal"); if(_m) _m.querySelectorAll("[data-close]").forEach(el=>el.addEventListener("click",closeCard));
+  const _m=document.getElementById("cardModal"); if(_m){ _m.querySelectorAll("[data-close]").forEach(el=>el.addEventListener("click",closeCard)); _m.addEventListener("keydown",trapCardTab); }
   document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ closeCard(); setNav(false); if(_fp)_fp.hidden=true; if(_sm)_sm.hidden=true; } });
+  // keyboard activation for focusable rows (role=button): Enter/Space opens the card
+  document.addEventListener("keydown",e=>{ if(e.key==="Enter"||e.key===" "){ const el=document.activeElement;
+    if(el&&el.classList&&el.classList.contains("crow-click")){ e.preventDefault(); el.click(); } } });
   const _pb=document.getElementById("pb"); if(_pb) _pb.addEventListener("click",e=>{ const tr=e.target.closest&&e.target.closest("tr.crow-click"); if(tr) openCard(PROGRAMS[+tr.getAttribute("data-i")]); });
   const _ob=document.getElementById("ob"); if(_ob) _ob.addEventListener("click",e=>{ const tr=e.target.closest&&e.target.closest("tr.crow-click"); if(tr) openCard(PROGRAMS[+tr.getAttribute("data-i")]); });
   const _rec=document.getElementById("pl-rec"); if(_rec) _rec.addEventListener("click",e=>{
@@ -878,6 +896,13 @@ function init(){
 
   setTheme("light"); renderMeta(); buildFX(); renderUniverse(); renderDQ(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
   route(); URL_READY=true; syncURL();
+  } catch(err){
+    if(typeof console!=="undefined"&&console.error) console.error("Benchmark DB init failed:",err);
+    var mn=document.querySelector(".main")||document.body;
+    mn.insertAdjacentHTML("afterbegin","<div role='alert' style='font-family:system-ui,sans-serif;max-width:620px;margin:8vh auto;padding:24px;border:1px solid #e2d8c4;border-radius:12px;background:#fff;color:#33424f;text-align:center'>"+
+      "<h1 style='font-weight:600;font-size:21px;margin:0 0 8px'>Something went wrong loading the dashboard</h1>"+
+      "<p style='line-height:1.6;margin:0'>The page hit an unexpected error while rendering and couldn’t finish. Try reloading; if it persists, the dataset file may be corrupted — see the README to rebuild it.</p></div>");
+  }
 }
 document.addEventListener("DOMContentLoaded",init);
 

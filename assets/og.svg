@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0f3b39"/>
+      <stop offset="1" stop-color="#15514d"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <g transform="translate(96,96)">
+    <rect width="96" height="96" rx="22" fill="#2E8B86"/>
+    <text x="48" y="68" font-family="Georgia, serif" font-size="60" font-weight="700" text-anchor="middle" fill="#fff">B</text>
+    <circle cx="75" cy="22" r="9" fill="#E0A93B"/>
+  </g>
+  <text x="96" y="320" font-family="Georgia, serif" font-size="78" font-weight="700" fill="#ffffff">Benchmark DB</text>
+  <text x="96" y="384" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="34" fill="#9fd6cf">IATI evidence base for programme design</text>
+  <text x="96" y="470" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="27" fill="#cfe7e3">Median budgets, durations &amp; reporting rates from real comparable</text>
+  <text x="96" y="508" font-family="system-ui, -apple-system, Segoe UI, sans-serif" font-size="27" fill="#cfe7e3">aid programmes — across developing countries. Reported or derived only.</text>
+  <rect x="96" y="556" width="200" height="6" rx="3" fill="#E0A93B"/>
+</svg>

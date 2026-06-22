@@ -354,6 +354,7 @@ footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);font-si
 .chartcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:var(--shadow);min-width:0}
 .chartcard h3{margin:0 0 2px;font-family:var(--serif);font-weight:600;font-size:15px}
 .chartcard .csub{color:var(--text2);font-size:11.5px;margin:0 0 10px}
+.chartcard .cnote-chart{color:var(--text2);font-size:11px;line-height:1.5;margin:8px 0 0;padding-top:8px;border-top:1px solid var(--line);opacity:.92}
 svg.chart{width:100%;height:auto;display:block;overflow:visible}
 svg.chart .cg{stroke:var(--line);stroke-width:1}
 svg.chart .ct,svg.chart .cx{fill:var(--faint);font-size:9px;font-family:var(--sans)}

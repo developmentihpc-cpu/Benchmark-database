@@ -1,10 +1,28 @@
 <!doctype html><html lang="en" data-theme="light"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Benchmark DB — IATI evidence base</title>
+<title>Benchmark DB — IATI evidence base for programme design</title>
+<meta name="description" content="A design-reference dashboard of real comparable aid programmes from the IATI Standard — median budgets, durations and reporting rates by sector, donor type and region, to inform realistic programme scope. Every figure is reported or derived; none fabricated.">
+<meta name="theme-color" content="#0f766e">
+<link rel="canonical" href="https://developmentihpc-cpu.github.io/Benchmark-database/">
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20width='64'%20height='64'%20rx='14'%20fill='%232E8B86'/%3E%3Ctext%20x='32'%20y='45'%20font-family='Georgia,serif'%20font-size='40'%20font-weight='700'%20text-anchor='middle'%20fill='%23fff'%3EB%3C/text%3E%3Ccircle%20cx='50'%20cy='15'%20r='6'%20fill='%23E0A93B'/%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Benchmark DB">
+<meta property="og:title" content="Benchmark DB — IATI evidence base for programme design">
+<meta property="og:description" content="Real comparable aid programmes from IATI: median budgets, durations and reporting rates by sector, donor type and region — to design realistic programme scope. Reported or derived figures only.">
+<meta property="og:url" content="https://developmentihpc-cpu.github.io/Benchmark-database/">
+<meta property="og:image" content="https://developmentihpc-cpu.github.io/Benchmark-database/assets/og.svg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Benchmark DB — IATI evidence base for programme design">
+<meta name="twitter:description" content="Real comparable aid programmes from IATI: median budgets, durations and reporting rates by sector, donor type and region.">
+<meta name="twitter:image" content="https://developmentihpc-cpu.github.io/Benchmark-database/assets/og.svg">
 <link rel="stylesheet" href="css/fonts.css">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body><div class="app">
+<noscript><div style="max-width:560px;margin:14vh auto;padding:28px;text-align:center;font-family:Georgia,serif;color:#33424f">
+ <h1 style="font-weight:600;font-size:22px">Benchmark DB needs JavaScript</h1>
+ <p style="line-height:1.6;font-family:system-ui,sans-serif">This is a fully client-side dashboard — all data and computation run in your browser, with no server. Please enable JavaScript to view the programmes, benchmarks and planner.</p>
+</div></noscript>
 
 <div class="scrim" id="navScrim"></div>
 <aside class="sidebar" id="sidebar">
@@ -21,7 +39,7 @@
   <button class="nav-item" data-view="readme"><svg class="ico" viewBox="0 0 16 16"><path d="M6.2 2.5 4.4 13.5M11.6 2.5 9.8 13.5M3.2 6h10M2.6 10h10"/></svg><span>#read_me</span></button>
  </nav>
  <div class="side-foot">
-  <div class="side-meta"><span id="m-nprog">3,388</span> programmes · <span id="m-ncountry">125</span> developing countries<br>started ≥ 2021-06-02 or ongoing · 2026-06-02</div>
+  <div class="side-meta"><span id="m-nprog">6,631</span> programmes · <span id="m-ncountry">124</span> developing countries<br>started ≥ 2021-06-02 or ongoing · 2026-06-02</div>
   <div class="theme-toggle"><button class="theme-btn on" data-theme="light">☀ Light</button><button class="theme-btn" data-theme="dark">☾ Dark</button></div>
   <div class="theme-toggle basis-set" title="Real = inflation-adjusted to constant 2024 USD (US CPI)"><button class="basis-btn on" data-basis="nominal">$ Nominal</button><button class="basis-btn" data-basis="real">$ Real ’24</button></div>
  </div>
@@ -133,7 +151,7 @@
    <h2>What this is</h2>
    <p>A reference set of real comparable programmes and live benchmarks to inform programme <b>design</b> — realistic scope, budget, duration and targets. It is a design reference, not an M&amp;E tracking system.</p>
    <h2>Scope</h2>
-   <p>All <b>developing countries</b> — World Bank non&ndash;high-income economies (high-income and aggregates excluded); <span id="m-ncountry2">125</span> countries appear here. A programme is kept if it <b>started on or after 2021-06-02</b> (the last 5 years) <b>or</b> is <b>currently ongoing/planned</b> (IATI Implementation or Pipeline), so recently-closed programmes are included. Each programme's country is its primary recipient (highest reported share); multi-country programmes are marked &ldquo;+&rdquo;.</p>
+   <p>All <b>developing countries</b> — World Bank non&ndash;high-income economies (high-income and aggregates excluded); <span id="m-ncountry2">124</span> countries appear here. A programme is kept if it <b>started on or after 2021-06-02</b> (the last 5 years) <b>or</b> is <b>currently ongoing/planned</b> (IATI Implementation or Pipeline), so recently-closed programmes are included. Each programme's country is its primary recipient (highest reported share); multi-country programmes are marked &ldquo;+&rdquo;.</p>
    <h2>Provenance — every figure is one of</h2>
    <div class="tagdef"><b>REPORTED</b> — straight from the programme's own IATI record (budget, dates, reach, baseline/target/actual). Real.</div>
    <div class="tagdef"><b>DERIVED</b> — computed from reported figures: duration from dates, ≈USD via FX, real (constant-2024) USD via US CPI, achieved share = actual/target.</div>
@@ -145,7 +163,7 @@
     <li><b>Targets vs actuals.</b> Where both are reported, actuals frequently fall well short (e.g. 80 of 600 households). Design to expected actuals, not nominal targets.</li>
     <li><b>Double counting.</b> The same activity can be reported by funder, recipient and implementer under different IDs. Deduped by IATI identifier, but residual funding-chain overlap remains.</li>
     <li><b>Coverage.</b> Multilaterals are well represented globally, but programmes reported above country level (no single recipient country) are excluded by the developing-country focus, and a few large multilateral facilities publish only at aggregate level. For country macro data use the World Bank API.</li>
-    <li><b>Sample &amp; medians.</b> Each sector embeds a <b>representative</b> draw (~900 per sector, taken in the datastore&rsquo;s natural order &mdash; <b>not</b> ranked by budget &mdash; plus all that report reach) from the larger recent universe shown below. Because it is no longer budget-ranked, budget medians approximate the population rather than skewing high. It remains an IATI-only sample, so treat medians as indicative, not a census; for the authoritative full population use the OECD CRS or the complete IATI Datastore.</li>
+    <li><b>Sample &amp; medians.</b> Each sector embeds a draw from the larger recent universe shown below &mdash; <b>not</b> ranked by budget, so budget medians approximate the population rather than skewing high. Thinly-published sectors are topped up from the official IATI Datastore by a <b>publisher-capped</b> draw: each sector takes the most <b>recent</b> activities across donors with at most ~6 per publisher (round-robin), so no single donor dominates a sector&rsquo;s median. Where few donors publish recent activity in a purpose code, that sector is left <b>small rather than padded</b> with one publisher &mdash; so per-sector <i>n</i> varies (see the calibration table&rsquo;s &ldquo;In sample&rdquo; column). It remains an IATI-only sample, so treat medians as indicative, not a census; for the authoritative full population use the OECD CRS or the complete IATI Datastore.</li>
     <li><b>FX is indicative.</b> ≈USD uses fixed rates (below), not date-matched — order-of-magnitude only. Edit them and the grids recompute live.</li>
     <li><b>Providing country (bilateral).</b> For bilateral programmes the funder/providing country is <b>inferred</b> from the funding organisation (IATI participating-org with role = funding) or the reporting organisation — via its ISO registration prefix or a name/agency match — and tagged as inferred. Where it can&rsquo;t be determined confidently it is left blank, never guessed.</li>
     <li><b>Inflation &amp; PPP.</b> The <b>USD</b> toggle (sidebar) switches nominal vs <b>real</b> constant-2024 USD, deflating each programme by its start-year using US CPI (World Bank, base 2024). PPP adjustment is <b>deliberately omitted</b>: donor budgets are spent on a shifting mix of imported and local goods, so converting them to local purchasing-power terms would imply a precision the data does not support.</li>
@@ -159,9 +177,9 @@
    <p class="muted">For each sector: how many programmes are in this embedded sample, the recent IATI universe it is drawn from (live from the official IATI Datastore), the resulting coverage, and — for outside context — recent ODA to that sector from the <b>OECD CRS</b> (latest year, all DAC donors → developing countries). Coverage well under 100% is expected — this is a representative sample, not a census. <b>The OECD column is a different measure</b> (annual ODA US$, a broader all-DAC-donor universe than IATI), shown for scale, not a coverage denominator. Refresh both with <code>datastore_totals.py</code> (free IATI key) and <code>crs_calibration.py</code> (no key).</p>
    <table class="mtable"><thead><tr><th>Sector</th><th>Stream</th><th class="c-num">In sample</th><th class="c-num">Recent IATI</th><th class="c-num">Coverage</th><th class="c-num">OECD CRS ODA</th></tr></thead><tbody id="iati-universe"></tbody></table>
    <h2>Refresh &amp; extend</h2>
-   <p>Regenerate with the Python pipeline: <b>setup_geo.py</b> builds the developing-country + region reference from the World Bank API, <b>pull.py</b> fetches and classifies (edit the sector list and caps at the top), <b>build_html.py</b> rebuilds this page. For production, point pull.py at the official IATI v3 datastore with a free API key instead of the no-key mirror.</p>
+   <p>The dataset is embedded directly in <code>js/data.js</code> — there is no server and no build step; this page is static. To regenerate or grow it: <b>iati_ingest.py</b> holds the shared ingestion core (developing-country + region reference, DAC-sector and stream classification). The per-sector samples are pulled from the official <b>IATI Datastore</b> (free API key) and drawn <b>publisher-capped</b> so no single donor dominates a sector. <b>add_sector.py</b> adds a DAC sector, <b>add_uae.py</b> a publisher; <b>enrich_llm.py</b> adds optional English summaries. Refresh the calibration columns below with <b>datastore_totals.py</b> (Recent IATI; needs the key) and <b>crs_calibration.py</b> (OECD CRS; no key). Set the key as an environment variable — never commit it.</p>
   </div>
-  <footer>Benchmark DB · IATI via Code for IATI · <span id="f-nprog">3,388</span> programmes across <span id="f-ncountry">125</span> developing countries / <span id="f-nout">700</span> reported indicators · generated 2026-06-02 · every figure is REPORTED or DERIVED — no fabricated benchmarks.</footer>
+  <footer>Benchmark DB · IATI via Code for IATI · <span id="f-nprog">6,631</span> programmes across <span id="f-ncountry">124</span> developing countries / <span id="f-nout">6,169</span> reported indicators · generated 2026-06-02 · every figure is REPORTED or DERIVED — no fabricated benchmarks.</footer>
  </section>
 
 <div id="cardModal" class="cmodal" hidden><div class="cmodal-bg" data-close="1"></div><div class="cmodal-card" role="dialog" aria-modal="true"><button class="cmodal-x" data-close="1" aria-label="Close">×</button><div id="cardBody"></div></div></div>

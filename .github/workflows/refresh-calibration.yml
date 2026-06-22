@@ -1,0 +1,56 @@
+name: Refresh calibration columns
+
+# Keeps the #read_me calibration table from silently going stale: re-pulls the
+# "Recent IATI" universe counts (TOTALS) and the OECD CRS ODA column (CRS) and
+# commits the updated js/data.js. It touches ONLY those two embedded globals —
+# never the programme sample, which is a judgement-heavy publisher-capped draw
+# done manually. Runs quarterly, or on demand.
+#
+# Setup (one-time): add a repository secret IATI_DATASTORE_KEY with your free
+# IATI Datastore subscription key (https://developer.iatistandard.org/).
+# The OECD CRS pull needs no key.
+
+on:
+  schedule:
+    - cron: "17 4 1 1,4,7,10 *"   # 04:17 UTC on the 1st of Jan/Apr/Jul/Oct
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Refresh Recent-IATI universe counts (TOTALS)
+        if: ${{ env.IATI_DATASTORE_KEY != '' }}
+        env:
+          IATI_DATASTORE_KEY: ${{ secrets.IATI_DATASTORE_KEY }}
+        run: python datastore_totals.py --refresh
+
+      - name: Note if the IATI key is missing
+        if: ${{ env.IATI_DATASTORE_KEY == '' }}
+        env:
+          IATI_DATASTORE_KEY: ${{ secrets.IATI_DATASTORE_KEY }}
+        run: echo "::warning::IATI_DATASTORE_KEY secret not set — skipping the Recent-IATI refresh; only the OECD CRS column will update."
+
+      - name: Refresh OECD CRS ODA column (no key)
+        run: python crs_calibration.py
+
+      - name: Commit if the calibration data changed
+        run: |
+          if git diff --quiet -- js/data.js; then
+            echo "No calibration changes."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add js/data.js
+            git commit -m "Refresh calibration columns (TOTALS + OECD CRS) [automated]"
+            git push
+          fi
