@@ -254,12 +254,15 @@ function renderMeta(){ const np=PROGRAMS.length, nc=uniq(PROGRAMS,"co").length, 
 function renderUniverse(){ const tb=document.getElementById("iati-universe"); if(!tb) return;
   const snStream={}, snCount={};
   PROGRAMS.forEach(p=>{ if(p.sn){ if(!(p.sn in snStream)) snStream[p.sn]=p.s; snCount[p.sn]=(snCount[p.sn]||0)+1; } });
+  const crs=(typeof CRS!=="undefined")?CRS:{};
   tb.innerHTML=SECTORS.map(function(s){ const t=TOTALS[s]||{};
     const st=t.stream||snStream[s]||"—";
     const samp=snCount[s]||0, uni=t.recent_total;
     const cov=(uni!=null&&uni>0)?Math.min(100,Math.round(100*samp/uni))+"%":"—";
+    const c=crs[s], crsCell=(c&&c.oda!=null)?fmtCompact(c.oda):"—";
     return "<tr><td>"+esc(s)+"</td><td>"+esc(st)+"</td><td class='c-num'>"+nf.format(samp)+"</td>"+
-      "<td class='c-num'>"+(uni!=null?nf.format(uni):"—")+"</td><td class='c-num'>"+cov+"</td></tr>"; }).join(""); }
+      "<td class='c-num'>"+(uni!=null?nf.format(uni):"—")+"</td><td class='c-num'>"+cov+"</td>"+
+      "<td class='c-num'>"+crsCell+"</td></tr>"; }).join(""); }
 
 /* ---------- data quality / coverage ---------- */
 function dqTile(k,v,s){ return "<div class='dqcard'><div class='dq-k'>"+esc(k)+"</div><div class='dq-v'>"+v+"</div><div class='dq-s'>"+esc(s)+"</div></div>"; }
