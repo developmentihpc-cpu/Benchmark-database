@@ -783,7 +783,11 @@ function renderCharts(){
 /* ---------- Country profiles ---------- */
 const CY={country:""};
 function cyTop(rows,key,n){ const m={}; rows.forEach(r=>{const k=r[key]; if(k) m[k]=(m[k]||0)+1;}); return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,n); }
-function cyBars(items){ const max=Math.max(1,...items.map(d=>d.v)); return items.map(d=>"<div class='cp-bar-row'><span class='cp-bl'>"+esc(d.l)+"</span><span class='cp-bar'><span style='width:"+Math.round(100*d.v/max)+"%'></span></span><span class='cp-bv'>"+esc(d.disp||String(d.v))+"</span></div>").join("")||"<p class='muted'>—</p>"; }
+function cyBars(items,linkType){ const max=Math.max(1,...items.map(d=>d.v));
+  return items.map(d=>{ const inner="<span class='cp-bl'>"+esc(d.l)+"</span><span class='cp-bar'><span style='width:"+Math.round(100*d.v/max)+"%'></span></span><span class='cp-bv'>"+esc(d.disp||String(d.v))+"</span>";
+    return linkType
+      ? "<button type='button' class='cp-bar-row cp-bar-link' data-link='"+linkType+"' data-val=\""+eatt(d.l)+"\" title='Plan in "+esc(CY.country)+" scoped to "+esc(d.l)+"'>"+inner+"<span class='cp-go'>plan ›</span></button>"
+      : "<div class='cp-bar-row'>"+inner+"</div>"; }).join("")||"<p class='muted'>—</p>"; }
 function renderCountry(){
   const el=document.getElementById("country"); if(!el) return;
   if(!CY.country){ el.innerHTML="<div class='cprompt'>Select a country above to see its profile.</div>"; syncURL(); return; }
@@ -803,14 +807,22 @@ function renderCountry(){
     "<div class='cp-card'><div class='cp-k'>Median duration</div><div class='cp-v'>"+(medD==null?"—":Math.round(medD)+" mo")+"</div></div>"+
     "<div class='cp-card'><div class='cp-k'>Report results</div><div class='cp-v'>"+fmtPct(resPct)+"</div></div></div>";
   h+="<div class='cp-grid2'>"+
-    "<div class='cp-panel'><h3>By sector</h3>"+cyBars(secs)+"</div>"+
-    "<div class='cp-panel'><h3>By donor type</h3>"+cyBars(donors)+(provs.length?"<h3 class='cp-h2'>Top providing countries</h3>"+cyBars(provs):"")+"</div></div>";
+    "<div class='cp-panel'><h3>By sector</h3>"+cyBars(secs,"sector")+"</div>"+
+    "<div class='cp-panel'><h3>By donor type</h3>"+cyBars(donors,"donor")+(provs.length?"<h3 class='cp-h2'>Top providing countries <span class='cp-inf'>(inferred)</span></h3>"+cyBars(provs,"prov"):"")+"</div></div>";
   h+="<div class='cp-panel'><h3>Recent programmes</h3>"+recent.map(p=>"<div class='cp-prog crow-click' data-i='"+p._i+"' tabindex='0' role='button' aria-label='Open programme details'><span class='pcn'>"+esc(pName(p))+"</span><span class='pcm'>"+esc(p.sn)+" · "+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+esc(p.st||"—")+" · <span class='rowmore'>open ›</span></span></div>").join("")+"</div>";
   h+="</div>";
   el.innerHTML=h;
   const g=document.getElementById("cy-grid"); if(g) g.addEventListener("click",()=>{ Object.assign(PS,{q:"",d:"",rg:"",co:CY.country,sc:"",sta:"",re:"",prov:"",page:1}); reflectControls(); showView("programmes"); renderPrograms(); });
   const pl=document.getElementById("cy-plan"); if(pl) pl.addEventListener("click",()=>{ PL.country=CY.country; setVal("pl-country",PL.country); showView("plan"); renderPlanRec(); renderPlanCalc(); });
   el.querySelectorAll(".cp-prog[data-i]").forEach(r=>r.addEventListener("click",()=>openCard(PROGRAMS[+r.getAttribute("data-i")])));
+  // deep-link the sector/donor/provider bars into the planner, scoped to this country
+  el.querySelectorAll(".cp-bar-link").forEach(b=>b.addEventListener("click",()=>{
+    const lt=b.getAttribute("data-link"), val=b.getAttribute("data-val");
+    PL.country=CY.country;
+    if(lt==="donor") PL.donor=val; else if(lt==="prov") PL.prov=val; else if(lt==="sector") PL.sector=val;
+    setVal("pl-country",PL.country); setVal("pl-donor",PL.donor); setVal("pl-prov",PL.prov); setVal("pl-sector",PL.sector);
+    showView("plan"); renderPlanRec(); renderPlanCalc();
+  }));
   syncURL();
 }
 

@@ -383,6 +383,11 @@ svg.chart .cpt{fill:var(--accent);opacity:.4}
 .cp-bar{height:8px;border-radius:5px;background:var(--bar-b);overflow:hidden}
 .cp-bar>span{display:block;height:100%;border-radius:5px;background:var(--accent)}
 .cp-bv{text-align:right;font-variant-numeric:tabular-nums;color:var(--text);font-size:11.5px}
+.cp-bar-link{grid-template-columns:120px 1fr 54px auto;width:100%;border:0;background:none;font:inherit;text-align:left;cursor:pointer;padding:5px 6px;margin:1px -6px;border-radius:7px}
+.cp-bar-link:hover,.cp-bar-link:focus-visible{background:var(--bar-b)}
+.cp-go{font-size:10.5px;color:var(--accent);opacity:0;white-space:nowrap;transition:opacity .12s}
+.cp-bar-link:hover .cp-go,.cp-bar-link:focus-visible .cp-go{opacity:1}
+.cp-inf{font-size:10px;color:var(--text2);font-weight:400}
 .cp-prog{display:block;padding:9px 0;border-top:1px solid var(--line);cursor:pointer}
 .cp-prog:first-of-type{border-top:0}
 .cp-prog .pcn{display:block;font-weight:500}
