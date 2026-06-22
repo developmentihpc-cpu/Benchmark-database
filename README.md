@@ -7,7 +7,8 @@ is the [IATI Standard](https://iatistandard.org/) via the
 pulled 2026-06-02). It is a design reference, not an M&E tracking system.
 
 The app is a fully client-side, in-memory single-page app — no backend, no build
-step. It ships with an embedded representative sample of **3,388 programmes** across
+step. It ships with an embedded representative sample of **4,000+ programmes** (the
+UI counts the live number) across
 **125 developing countries** and **700 reported indicators**.
 
 ## Run it
@@ -106,12 +107,21 @@ top-level declarations are visible to each other. Load order matters —
 
 ## Tests
 
-The pure helpers in `js/lib.js` (medians, quantiles, FX/date math, formatting)
-have unit tests. `lib.js` is dual-mode: a browser global script *and* a Node
-module, so the tests import it directly. Run with Node 18+ (no dependencies):
+Two suites, run with Node 18+ (no dependencies):
+
+- [`test/data.test.js`](test/data.test.js) — unit tests for the pure helpers in
+  `js/lib.js` (medians, quantiles, FX/date math, formatting). `lib.js` is
+  dual-mode (browser global *and* Node module), so the tests import it directly.
+- [`test/integrity.test.js`](test/integrity.test.js) — **data-integrity guards**
+  over the embedded `js/data.js`: valid stream/donor/status enums, unique IATI
+  ids, 5-digit DAC sectors (no placeholder names), non-negative amounts, the GAP
+  rule (a zero/absent amount never becomes a real $0 comparator), every recipient
+  country resolves to a region, every used currency has an FX rate, and provider
+  countries are internally consistent. These catch the kind of pollution a bad
+  IATI pull can introduce, so run them after `add_uae.py` / `add_sector.py`.
 
 ```sh
-npm test          # alias for: node --test
+npm test          # alias for: node --test  (runs both suites in test/)
 ```
 
 ## Views
@@ -177,12 +187,13 @@ editable live in the #read_me view.
 | `d` | donor type (Bilateral/Multilateral/NGO/Foundation/Private sector) | `rc` | reported reach count (or null) |
 | `r` | reporting org name | `rb` | reach indicator label |
 | `rt` | reporting org type | `re` | reports results (0/1) |
-| `s` | stream (Humanitarian/WASH/Governance/Development) | `year` | start year |
+| `s` | stream (Humanitarian/WASH/Governance/Development/Infrastructure & Economic) | `year` | start year |
 | `sc` | DAC 5-digit sector code | `fn` | funder name |
 | `sn` | sector name | `pcc` | providing-country ISO2 (bilateral, inferred) |
 | `co` | recipient country name | `pn` | providing-country name |
 | `cc` | recipient country ISO2 | `id` | IATI activity identifier |
-| `rg` | region | `desc` | English IATI activity description (added by enrich; optional) |
+| `rg` | region | `desc` | full English IATI activity description (added by enrich; optional) |
+| `name_en` | English title — set only when `n` is non-English (added by `enrich_llm.py`) | `summary` | one-line "core activities" summary of `desc` (added by `enrich_llm.py`) |
 | `sta` | status (Ongoing/Planned/Finalisation/Closed/Suspended/Cancelled) | `multi` | 1 if multi-country |
 | `st`,`en` | start/end date (ISO) | `c`,`a` | currency code, amount (original) |
 
@@ -214,6 +225,143 @@ python enrich_descriptions.py              # enrich all programmes in place
 python enrich_descriptions.py --limit 50   # test on the first 50
 python enrich_descriptions.py --force      # re-fetch even if desc exists
 ```
+
+### English-only titles + one-line summaries (Claude API)
+
+A second, optional pass — [`enrich_llm.py`](enrich_llm.py) — uses the
+**Anthropic API** to finish two things the raw data can't do itself:
+
+1. **Translate** any non-English programme title to English (written to a new
+   `name_en` field; English titles are left untouched).
+2. **Summarise** each real `desc` into a single plain-English "core activities"
+   sentence (written to a new `summary` field). The card then shows the summary,
+   with the full description still available behind **Show more**.
+
+The app reads both defensively (`name_en || n`, `summary || desc || derived`), so
+this pass is purely additive — the site works with or without it.
+
+It uses the **Message Batches API** (50% cheaper, async) with the cheap **Haiku**
+model and a shared, cache-marked system prompt, so the whole data set costs a few
+cents to ~$1 of tokens. It is re-runnable and **resumable**: results are cached in
+`enrich_llm_cache.json`, the in-flight batch id is saved to `enrich_llm_state.json`
+(re-run to reconnect rather than resubmit), and the write-back is idempotent.
+
+You supply your own key via the `ANTHROPIC_API_KEY` environment variable — it is
+never hard-coded or stored, and costs land on your Anthropic account.
+
+```sh
+pip install anthropic
+export ANTHROPIC_API_KEY=sk-ant-...     # Windows: set ANTHROPIC_API_KEY=...
+
+python enrich_llm.py                 # translate names + summarise descriptions
+python enrich_llm.py --limit 25      # smoke-test on 25 records first
+python enrich_llm.py --dry-run       # preview the plan; no API calls
+python enrich_llm.py --names-only    # only translate non-English titles
+python enrich_llm.py --desc-only     # only summarise descriptions
+python enrich_llm.py --apply-only    # write the cache into data.js (no API calls)
+python enrich_llm.py --force         # ignore the cache and redo everything
+```
+
+Non-English **outcome indicator labels** are handled separately, at render time,
+by [`js/i18n.js`](js/i18n.js) (no data mutation), so this pass only touches
+programme titles and descriptions.
+
+## Adding more publishers (e.g. UAE)
+
+[`add_uae.py`](add_uae.py) pulls a publisher's activities straight from
+**d-portal** (no API key) and appends them to `js/data.js` in the project's
+schema. It ships pointed at the **United Arab Emirates** aid programme — the UAE
+Ministry of Foreign Affairs (MOFAIC), IATI reporting-org ref `XM-DAC-576` (576 is
+the OECD-DAC donor code for the UAE), ~223 activities.
+
+```sh
+python add_uae.py                 # add all active UAE publishers (currently MOFAIC)
+python add_uae.py --limit 25      # test on the first 25 per publisher
+python add_uae.py --dry-run       # preview what would be added; writes nothing
+python add_uae.py --all-countries # don't restrict to the developing-country set
+python add_uae.py --include AE-ADFD-1,AE-ERC-1   # also pull candidate UAE bodies
+python add_uae.py --ref XX-ABC-1  # or one arbitrary IATI reporting-org ref
+```
+
+The script carries a small **registry of UAE publishers** (`PUBLISHERS` near the
+top). As of 2026-06, **only MOFAIC (`XM-DAC-576`) publishes to IATI** — verified
+against the full d-portal publisher list. **Abu Dhabi Fund for Development**,
+**Emirates Red Crescent** and **Dubai Cares** are listed as *inactive candidates*
+with sensible donor/org types; when one starts publishing, flip its `active` flag
+(or pass `--include <ref>`) and re-run — donor type, org type and reporting name
+come from the registry entry and the publisher's own IATI data, so no other change
+is needed.
+
+For each activity it fetches the full IATI record, classifies it into the
+schema (stream by DAC sector group, region from the country, status, currency and
+original amount), filters to the developing-country set to match the rest of the
+sample, and **skips anything it can't classify rather than guessing** (an activity
+with no recipient country or no DAC sector is reported and dropped). It is
+re-runnable — activities already in `js/data.js` are skipped — and it bumps
+`META.nprog`. Afterwards, run [`enrich_llm.py`](enrich_llm.py) to add the one-line
+`summary` (and `name_en` for any non-English titles) for the new records.
+
+## Adding more sectors
+
+The embedded sample only covers seven DAC sub-sectors. [`add_sector.py`](add_sector.py)
+broadens it by pulling real activities for a curated set of additional DAC sectors
+(no API key — same d-portal source) and appending them in the project's schema.
+
+```sh
+python add_sector.py                 # add all three tiers
+python add_sector.py --tier 1        # just Tier 1 (fill the obvious holes)
+python add_sector.py --codes 23210,11320   # only these DAC codes
+python add_sector.py --per 30        # cap activities pulled per sector (default 50)
+python add_sector.py --dry-run       # preview; writes nothing
+```
+
+The curated tiers (edit `TIERS` in the script to taste):
+
+- **Tier 1** — sanitation, reproductive/HIV/malaria/infectious-disease/nutrition
+  health, emergency food + disaster preparedness + reconstruction, secondary &
+  vocational & early-childhood education.
+- **Tier 2** — rural development, social protection, SME/business/financial,
+  legal-judicial/human-rights/peacebuilding.
+- **Tier 3** — renewable energy & solar, transport, environment.
+
+Tier 1–2 sectors map onto the existing streams; **Tier 3 lands in a fifth stream,
+"Infrastructure & Economic"** (energy, transport, communications, banking,
+business, industry, trade, environment — see `stream_for()` in
+[`iati_ingest.py`](iati_ingest.py)). Streams are data-driven in the app, and the
+Benchmarks "by sector" tables now auto-include any sector with enough programmes
+to benchmark, so added sectors appear without further code changes. A full run
+makes many per-activity fetches (≈ sectors × `--per`), so it takes a while — it's
+a one-time build. Afterwards run [`enrich_llm.py`](enrich_llm.py) for the new
+records' summaries/translations.
+
+### Recent IATI universe counts (`TOTALS`)
+
+The #read_me "Recent IATI universe by sector" table and the benchmark "In IATI"
+column read from the `TOTALS` global (sector → recent activity count). New sectors
+show "—" until a count is extracted. **d-portal can't filter by sector**, so the
+counts come from the official **IATI Datastore** via
+[`datastore_totals.py`](datastore_totals.py), which needs a **free API key**
+(register at <https://developer.iatistandard.org/> and subscribe to the Datastore
+API):
+
+```sh
+export IATI_DATASTORE_KEY=...      # Windows: set IATI_DATASTORE_KEY=...
+python datastore_totals.py         # fill counts for sectors missing one
+python datastore_totals.py --refresh   # recompute every sector
+python datastore_totals.py --dry-run   # print the counts; write nothing
+```
+
+It queries the recent activity count (started since 2021-06-02 or ongoing — the
+same basis as the sample) for every sector in `js/data.js` and writes it into
+`TOTALS`. The Datastore is also the robust way to **pull by sector** if you extend
+the pipeline — it returns `recipient_country_code` / `sector_code` as flat fields,
+no per-activity fetches.
+
+Both [`add_uae.py`](add_uae.py) and `add_sector.py` share one ingestion core,
+[`iati_ingest.py`](iati_ingest.py) — IATI→schema classification (stream, donor
+type from the publisher's org type, region, status, currency) and the idempotent
+`js/data.js` splice. Nothing is fabricated: an activity with no recipient country
+or no DAC sector is reported and dropped, never guessed.
 
 ## Regenerating the data
 

@@ -2,6 +2,13 @@
 __pycache__/
 *.pyc
 
+# Local run artifacts from the enrichment/ingest scripts (regenerated, never committed)
+enrich_llm_cache.json
+enrich_llm_state.json
+_*.pl
+_*.json
+*.bak
+
 # Node
 node_modules/
 

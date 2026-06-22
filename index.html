@@ -9,7 +9,7 @@
 <div class="scrim" id="navScrim"></div>
 <aside class="sidebar" id="sidebar">
  <div class="brand"><div class="logo">B</div><div><div class="bname">Benchmark<em>DB</em></div><div class="bsub">IATI evidence base</div></div></div>
- <div class="side-search"><svg viewBox="0 0 16 16"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input id="sq" placeholder="Search programmes…"></div>
+ <div class="side-search"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="M11 11l3 3"/></svg><input id="sq" type="search" aria-label="Search programmes" placeholder="Search programmes…"></div>
  <div class="nav-group">Views</div>
  <nav>
   <button class="nav-item active" data-view="programmes"><svg class="ico" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6.2h12M6.5 6.2V13"/></svg><span>Programmes</span><b class="badge" id="badge-prog">0</b></button>
@@ -21,7 +21,7 @@
   <button class="nav-item" data-view="readme"><svg class="ico" viewBox="0 0 16 16"><path d="M6.2 2.5 4.4 13.5M11.6 2.5 9.8 13.5M3.2 6h10M2.6 10h10"/></svg><span>#read_me</span></button>
  </nav>
  <div class="side-foot">
-  <div class="side-meta">3,388 programmes · 125 developing countries<br>started ≥ 2021-06-02 or ongoing · 2026-06-02</div>
+  <div class="side-meta"><span id="m-nprog">3,388</span> programmes · <span id="m-ncountry">125</span> developing countries<br>started ≥ 2021-06-02 or ongoing · 2026-06-02</div>
   <div class="theme-toggle"><button class="theme-btn on" data-theme="light">☀ Light</button><button class="theme-btn" data-theme="dark">☾ Dark</button></div>
   <div class="theme-toggle basis-set" title="Real = inflation-adjusted to constant 2024 USD (US CPI)"><button class="basis-btn on" data-basis="nominal">$ Nominal</button><button class="basis-btn" data-basis="real">$ Real ’24</button></div>
  </div>
@@ -42,13 +42,13 @@
    <div class="rcard"><div class="rk">Reporting results</div><div class="rv" id="st-res">—</div><div class="rs">share of selection</div></div>
   </div>
   <div class="controls">
-   <input id="q" class="search" placeholder="Search programme, org or country…">
+   <input id="q" class="search" type="search" aria-label="Search programmes, organisations or countries" placeholder="Search programme, org or country…">
    <button id="filters-btn" class="ctrl-btn" aria-expanded="false"><svg class="cbico" viewBox="0 0 16 16"><path d="M2 4h12M4 8h8M6.5 12h3"/></svg>Filters<span id="filters-count" class="ctrl-count" hidden>0</span></button>
    <button id="sort-btn" class="ctrl-btn"><svg class="cbico" viewBox="0 0 16 16"><path d="M5 13V3M5 3 2.6 5.4M5 3l2.4 2.4M11 3v10M11 13l-2.4-2.4M11 13l2.4-2.4"/></svg>Sort</button>
   </div>
   <div id="filters-panel" class="filters-panel" hidden>
-   <select id="f-donor"></select><select id="f-provider"></select><select id="f-region"></select><select id="f-country"></select><select id="f-sector"></select><select id="f-status"></select>
-   <select id="f-res"><option value="">Results: any</option><option value="Y">Reports results</option><option value="N">No results</option></select>
+   <select id="f-donor" aria-label="Filter by donor type"></select><select id="f-provider" aria-label="Filter by donor country"></select><select id="f-region" aria-label="Filter by region"></select><select id="f-country" aria-label="Filter by recipient country"></select><select id="f-sector" aria-label="Filter by sector"></select><select id="f-status" aria-label="Filter by status"></select>
+   <select id="f-res" aria-label="Filter by results reporting"><option value="">Results: any</option><option value="Y">Reports results</option><option value="N">No results</option></select>
   </div>
   <div id="sort-menu" class="sort-menu" hidden></div>
   <div id="chips" class="chips" hidden></div>
@@ -61,8 +61,8 @@
   <div class="gridwrap"><table class="grid"><thead><tr id="ph"></tr></thead><tbody id="pb"></tbody></table></div>
   <div class="gridfoot">
    <div class="gf-left">Showing <span id="p-range">0</span> of <b id="p-count">0</b> programmes <span class="muted">· selection <b id="sb-n">0</b></span></div>
-   <div class="pager"><span>rows</span><select id="pgsize"><option>25</option><option selected>50</option><option>100</option><option value="all">all</option></select>
-    <button id="p-prev">‹</button><span id="p-page">1 / 1</span><button id="p-next">›</button></div>
+   <div class="pager"><span>rows</span><select id="pgsize" aria-label="Rows per page"><option>25</option><option selected>50</option><option>100</option><option value="all">all</option></select>
+    <button id="p-prev" aria-label="Previous page">‹</button><span id="p-page">1 / 1</span><button id="p-next" aria-label="Next page">›</button></div>
   </div>
  </section>
 
@@ -73,13 +73,13 @@
 
  <section id="view-charts" class="view">
   <header class="topbar"><div class="tb-title"><h1>Charts</h1><p>Shape of the sample — distribution, time trend, scale-vs-duration and regional split. Filter to any slice; budgets follow the nominal ↔ real (2024) USD toggle in the sidebar.</p></div></header>
-  <div class="controls"><select id="ch-sector"></select><select id="ch-region"></select><select id="ch-donor"></select><span class="ch-count" id="ch-count"></span></div>
+  <div class="controls"><select id="ch-sector" aria-label="Filter charts by sector"></select><select id="ch-region" aria-label="Filter charts by region"></select><select id="ch-donor" aria-label="Filter charts by donor type"></select><span class="ch-count" id="ch-count"></span></div>
   <div id="charts" class="charts"></div>
  </section>
 
  <section id="view-countries" class="view">
   <header class="topbar"><div class="tb-title"><h1>Country profiles</h1><p>Pick a country for a one-screen profile: how much is spent, on what, by whom — then jump to the filtered programmes or pre-fill the planner.</p></div></header>
-  <div class="controls"><select id="cy-pick"></select></div>
+  <div class="controls"><select id="cy-pick" aria-label="Select a country"></select></div>
   <div id="country" class="country"></div>
  </section>
 
@@ -117,13 +117,14 @@
  <section id="view-outcomes" class="view">
   <header class="topbar"><div class="tb-title"><h1>Reported outcomes</h1><p>Real indicator-level baseline → target → actual values pulled from IATI.</p></div>
    <div class="tb-actions"><button id="o-export" class="btn">⤓ Export CSV</button></div></header>
-  <div class="controls"><input id="oq" class="search" placeholder="Search programme or indicator…">
-   <select id="o-stream"></select><select id="o-sector"></select><select id="o-type"></select></div>
+  <div class="controls"><input id="oq" class="search" type="search" aria-label="Search programme or indicator" placeholder="Search programme or indicator…">
+   <select id="o-stream" aria-label="Filter outcomes by stream"></select><select id="o-sector" aria-label="Filter outcomes by sector"></select><select id="o-type" aria-label="Filter outcomes by indicator type"></select></div>
+  <div id="o-progfilter" class="prog-filter" hidden></div>
   <div class="note"><b>Achieved = actual ÷ target</b> is shown per row (DERIVED) so you can judge each case — but it is <b>not aggregated into a benchmark</b>: many records copy target=actual (→100%) or leave actuals at 0 before reporting closes (→0%), so a median would measure data-entry behaviour. Scale: <span class="a5">≥100%</span> · <span class="a4">75</span> · <span class="a3">50</span> · <span class="a2">25</span> · <span class="a1">&lt;25%</span>.</div>
   <div class="gridwrap"><table class="grid"><thead><tr id="oh"></tr></thead><tbody id="ob"></tbody></table></div>
   <div class="gridfoot"><div class="gf-left">Showing <span id="o-range">0</span> of <b id="o-count">0</b> indicators</div>
-   <div class="pager"><span>rows</span><select id="opgsize"><option>25</option><option selected>50</option><option>100</option><option value="all">all</option></select>
-    <button id="o-prev">‹</button><span id="o-page">1 / 1</span><button id="o-next">›</button></div></div>
+   <div class="pager"><span>rows</span><select id="opgsize" aria-label="Rows per page"><option>25</option><option selected>50</option><option>100</option><option value="all">all</option></select>
+    <button id="o-prev" aria-label="Previous page">‹</button><span id="o-page">1 / 1</span><button id="o-next" aria-label="Next page">›</button></div></div>
  </section>
 
  <section id="view-readme" class="view method">
@@ -132,7 +133,7 @@
    <h2>What this is</h2>
    <p>A reference set of real comparable programmes and live benchmarks to inform programme <b>design</b> — realistic scope, budget, duration and targets. It is a design reference, not an M&amp;E tracking system.</p>
    <h2>Scope</h2>
-   <p>All <b>developing countries</b> — World Bank non&ndash;high-income economies (high-income and aggregates excluded); 125 countries appear here. A programme is kept if it <b>started on or after 2021-06-02</b> (the last 5 years) <b>or</b> is <b>currently ongoing/planned</b> (IATI Implementation or Pipeline), so recently-closed programmes are included. Each programme's country is its primary recipient (highest reported share); multi-country programmes are marked &ldquo;+&rdquo;.</p>
+   <p>All <b>developing countries</b> — World Bank non&ndash;high-income economies (high-income and aggregates excluded); <span id="m-ncountry2">125</span> countries appear here. A programme is kept if it <b>started on or after 2021-06-02</b> (the last 5 years) <b>or</b> is <b>currently ongoing/planned</b> (IATI Implementation or Pipeline), so recently-closed programmes are included. Each programme's country is its primary recipient (highest reported share); multi-country programmes are marked &ldquo;+&rdquo;.</p>
    <h2>Provenance — every figure is one of</h2>
    <div class="tagdef"><b>REPORTED</b> — straight from the programme's own IATI record (budget, dates, reach, baseline/target/actual). Real.</div>
    <div class="tagdef"><b>DERIVED</b> — computed from reported figures: duration from dates, ≈USD via FX, real (constant-2024) USD via US CPI, achieved share = actual/target.</div>
@@ -155,11 +156,11 @@
    <h2>FX rates — indicative (≈USD per unit), editable</h2>
    <div id="fx" class="fxgrid"></div>
    <h2>Recent IATI universe by sector (started since 2021-06-02)</h2>
-   <table class="mtable"><thead><tr><th>Sector</th><th>Stream</th><th class="c-num">Recent total</th></tr></thead><tbody><tr><td>Emergency response</td><td>Humanitarian</td><td class='c-num'>14,456</td></tr><tr><td>Basic drinking water</td><td>WASH</td><td class='c-num'>1,354</td></tr><tr><td>Public sector policy & PFM</td><td>Governance/Capacity</td><td class='c-num'>5,141</td></tr><tr><td>Civil society & participation</td><td>Governance/Capacity</td><td class='c-num'>16,352</td></tr><tr><td>Primary education</td><td>Development</td><td class='c-num'>2,162</td></tr><tr><td>Agricultural development</td><td>Development</td><td class='c-num'>4,520</td></tr><tr><td>Basic health care</td><td>Development</td><td class='c-num'>5,963</td></tr></tbody></table>
+   <table class="mtable"><thead><tr><th>Sector</th><th>Stream</th><th class="c-num">Recent total</th></tr></thead><tbody id="iati-universe"></tbody></table>
    <h2>Refresh &amp; extend</h2>
    <p>Regenerate with the Python pipeline: <b>setup_geo.py</b> builds the developing-country + region reference from the World Bank API, <b>pull.py</b> fetches and classifies (edit the sector list and caps at the top), <b>build_html.py</b> rebuilds this page. For production, point pull.py at the official IATI v3 datastore with a free API key instead of the no-key mirror.</p>
   </div>
-  <footer>Benchmark DB · IATI via Code for IATI · 3,388 programmes across 125 developing countries / 700 reported indicators · generated 2026-06-02 · every figure is REPORTED or DERIVED — no fabricated benchmarks.</footer>
+  <footer>Benchmark DB · IATI via Code for IATI · <span id="f-nprog">3,388</span> programmes across <span id="f-ncountry">125</span> developing countries / <span id="f-nout">700</span> reported indicators · generated 2026-06-02 · every figure is REPORTED or DERIVED — no fabricated benchmarks.</footer>
  </section>
 
 <div id="cardModal" class="cmodal" hidden><div class="cmodal-bg" data-close="1"></div><div class="cmodal-card" role="dialog" aria-modal="true"><button class="cmodal-x" data-close="1" aria-label="Close">×</button><div id="cardBody"></div></div></div>

@@ -10,8 +10,15 @@ if(typeof PROGRAMS==="undefined"||typeof OUTCOMES==="undefined"){
 }
 const DONOR_COLORS={Bilateral:"#4F7CA3",Multilateral:"#2E8B86",NGO:"#C2683E",
   Foundation:"#8E5BA6","Private sector":"#6B7785",Private:"#6B7785",Academic:"#7E8A6F",Other:"#98A0A8",PPP:"#5FB0AB"};
-const SECTORS=["Emergency response","Basic drinking water","Public sector policy & PFM",
+const SECTORS_LEAD=["Emergency response","Basic drinking water","Public sector policy & PFM",
   "Civil society & participation","Primary education","Agricultural development","Basic health care"];
+/* Benchmark "by sector" tables: lead with the curated sectors, then auto-include
+ * any other sector with enough programmes to benchmark (added via add_sector.py),
+ * ordered by representation. Keeps the view complete as the dataset grows. */
+const SECTORS=(function(){ const c={}; PROGRAMS.forEach(p=>{ if(p.sn) c[p.sn]=(c[p.sn]||0)+1; });
+  const lead=SECTORS_LEAD.filter(s=>c[s]);
+  const extra=Object.keys(c).filter(s=>SECTORS_LEAD.indexOf(s)<0 && c[s]>=8).sort((a,b)=>c[b]-c[a]);
+  return lead.concat(extra); })();
 const DONORS=["Bilateral","Multilateral","NGO","Foundation","Private sector"];
 const REGIONS=["Sub-Saharan Africa","MENA + Afg/Pak","South Asia","East Asia & Pacific","Latin Am. & Carib.","Europe & C. Asia"];
 const STATUS_CLASS={Ongoing:"st-ong",Planned:"st-plan",Finalisation:"st-fin",Closed:"st-clo",Suspended:"st-sus",Cancelled:"st-sus"};
@@ -20,7 +27,9 @@ const STATUS_CLASS={Ongoing:"st-ong",Planned:"st-plan",Finalisation:"st-fin",Clo
    js/lib.js, loaded before app.js. */
 let BASIS="nominal";
 function deflF(y){ if(BASIS!=="real"||typeof DEFLATOR==="undefined"||!DEFLATOR.f) return 1; const f=DEFLATOR.f[String(y)]; return (typeof f==="number")?f:1; }
-function usdOf(r){ const x=RATES[r.c]; if(typeof x!=="number") return null; return r.a*x*deflF(r.year); }
+function usdOf(r){ const x=RATES[r.c]; if(typeof x!=="number") return null;
+  if(!(typeof r.a==="number"&&r.a>0)) return null;            // no/zero amount = GAP, not a $0 programme
+  return r.a*x*deflF(r.year); }
 function fxNote(p){ const r=RATES[p.c]; if(typeof r!=="number") return "no FX rate for "+(p.c||"(no currency reported)")+" — excluded from USD figures";
   let s=(p.c||"?")+"→USD ×"+r; if(BASIS==="real"){ const f=deflF(p.year); if(f!==1) s+=" · US CPI ×"+f.toFixed(3)+" → 2024"; } return s; }
 
@@ -31,13 +40,16 @@ recomputeUSD();
 PROGRAMS.forEach((p,i)=>{p._i=i;});
 const PROG_BY_NAME={}; PROGRAMS.forEach(p=>{ if(p.n!=null && !(p.n in PROG_BY_NAME)) PROG_BY_NAME[p.n]=p._i; });
 const OUT_BY_NAME={}; OUTCOMES.forEach(o=>{ (OUT_BY_NAME[o.n]=OUT_BY_NAME[o.n]||[]).push(o); });
+/* Display title: prefer the LLM English translation (name_en, added by enrich_llm.py)
+ * over the raw — possibly non-English — title n. Linking/indexing still uses n. */
+function pName(p){ return p?(p.name_en||i18n(p.n)):""; }
 function ord(n){ const s=["th","st","nd","rd"],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
 function usdBasisLabel(){ return BASIS==="real"?"real 2024 USD (CPI-adjusted)":"nominal USD"; }
 
 /* nf, fmtUSD, fmtCompact, fmtNum, fmtPct, esc — see js/lib.js */
 
 const PS={q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",sort:"_usd",dir:-1,page:1,size:50};
-const OS={q:"",s:"",sn:"",t:"",sort:"_ach",dir:-1,page:1,size:50};
+const OS={q:"",s:"",sn:"",t:"",prog:"",sort:"_ach",dir:-1,page:1,size:50};
 
 function uniq(arr,key){ return [...new Set(arr.map(x=>x[key]).filter(Boolean))].sort(); }
 function fillSelect(id,vals,label){ const el=document.getElementById(id); if(!el) return; el.innerHTML="<option value=''>"+label+"</option>"+vals.map(v=>"<option>"+esc(v)+"</option>").join(""); }
@@ -47,9 +59,10 @@ function filterPrograms(){ const q=PS.q.toLowerCase(); return PROGRAMS.filter(p=
   if(PS.sc&&p.sn!==PS.sc) return false; if(PS.sta&&p.sta!==PS.sta) return false;
   if(PS.re==="Y"&&!p.re) return false; if(PS.re==="N"&&p.re) return false;
   if(PS.prov&&p.pn!==PS.prov) return false;
-  if(q&&!((p.n||"").toLowerCase().includes(q)||(p.r||"").toLowerCase().includes(q)||(p.co||"").toLowerCase().includes(q))) return false;
+  if(q&&!(((p.n||"")+" "+(p.name_en||"")).toLowerCase().includes(q)||(p.r||"").toLowerCase().includes(q)||(p.co||"").toLowerCase().includes(q))) return false;
   return true; }); }
 function filterOutcomes(){ const q=OS.q.toLowerCase(); return OUTCOMES.filter(o=>{
+  if(OS.prog&&o.n!==OS.prog) return false;
   if(OS.s&&o.s!==OS.s) return false; if(OS.sn&&o.sn!==OS.sn) return false; if(OS.t&&o.t!==OS.t) return false;
   if(q&&!(((o.n||"")+" "+(o.i||"")+" "+i18n(o.n||"")+" "+i18n(o.i||"")).toLowerCase().includes(q))) return false;
   return true; }); }
@@ -101,7 +114,7 @@ function renderPrograms(){
   const start=(PS.page-1)*PS.size, slice=rows.slice(start,start+PS.size);
   document.getElementById("pb").innerHTML=slice.map(p=>{
     return "<tr class='crow-click' data-i='"+p._i+"'>"+
-     "<td class='c-name'><span class='pname'>"+esc(p.n)+"</span><span class='pid'>"+esc(p.r)+" · "+esc(p.sc)+"</span></td>"+
+     "<td class='c-name'><span class='pname'>"+esc(pName(p))+"</span><span class='pid'>"+esc(i18n(p.r))+" · "+esc(p.sc)+"</span></td>"+
      "<td class='c-tag'"+(p.multi?" title='multiple recipient countries'":"")+">"+esc(p.co)+(p.multi?" <span class='multi'>+</span>":"")+"</td>"+
      "<td class='c-tag'>"+esc(p.rg)+"</td>"+
      "<td class='c-chip'>"+chip(p.d)+(p.d==="Bilateral"&&p.pcc?" <span class='provcc' title='providing country (inferred)'>"+esc(p.pcc)+"</span>":"")+"</td>"+
@@ -111,7 +124,7 @@ function renderPrograms(){
      "<td class='c-num'>"+(p._dur==null?"—":p._dur)+"</td>"+
      "<td class='c-num rep'>"+esc(p.c)+" "+nf.format(Math.round(p.a))+"<span class='sub'>"+esc(p.b)+"</span></td>"+
      "<td class='c-num strong' title='"+esc(fxNote(p))+"'>"+fmtUSD(p._usd)+"</td>"+
-     "<td class='c-num rep' title='"+esc(p.rb||"")+"'>"+(p.rc===""||p.rc==null?"—":fmtNum(p.rc))+(p.rc&&p.rb?"<span class='sub'>"+esc((p.rb||"").slice(0,24))+"</span>":"")+"</td>"+
+     "<td class='c-num rep' title='"+esc(i18n(p.rb)||"")+"'>"+(p.rc===""||p.rc==null?"—":fmtNum(p.rc))+(p.rc&&p.rb?"<span class='sub'>"+esc((i18n(p.rb)||"").slice(0,24))+"</span>":"")+"</td>"+
      "<td class='c-mid'>"+(p.re?"<span class='pill ok'>yes</span>":"<span class='dash'>–</span>")+"</td>"+
      "<td class='c-mid'><span class='rowmore'>open ›</span></td></tr>";
   }).join("")||"<tr><td colspan='14' class='empty'>No programmes match these filters.</td></tr>";
@@ -141,6 +154,10 @@ const OCOLS=[{k:"n",t:"Programme",c:"c-name"},{k:"s",t:"Stream",c:"c-tag"},{k:"s
  {k:"tg",t:"Target",c:"c-num"},{k:"ac",t:"Actual",c:"c-num"},{k:"_ach",t:"Achieved",c:"c-num"}];
 /* achClass — see js/lib.js */
 function renderOutcomes(){
+  const pf=document.getElementById("o-progfilter");
+  if(pf){ if(OS.prog){ const pi=PROG_BY_NAME[OS.prog]; const dn=(pi!=null&&PROGRAMS[pi])?pName(PROGRAMS[pi]):OS.prog;
+      pf.innerHTML="<span class='pf-lab'>Results for</span> <b>"+esc(dn)+"</b> <button id='o-progclear' class='pf-x' type='button' title='Clear'>Show all ✕</button>";
+      pf.hidden=false; } else { pf.hidden=true; pf.innerHTML=""; } }
   let rows=filterOutcomes(); const total=rows.length; rows=sortRows(rows,OS.sort,OS.dir);
   const pages=Math.max(1,Math.ceil(total/OS.size)); if(OS.page>pages) OS.page=pages;
   const start=(OS.page-1)*OS.size, slice=rows.slice(start,start+OS.size);
@@ -212,7 +229,7 @@ function dl(name,text){ const b=new Blob([text],{type:"text/csv;charset=utf-8"})
 function exportPrograms(){ const rows=sortRows(filterPrograms(),PS.sort,PS.dir);
   const head=["Programme","Description","Country","ISO","Region","Donor type","Providing country","Funder","Reporting org","Reporter type","Stream","DAC code","Sector","Status","Start","End","Duration (mo)","Currency","Amount (orig)","Basis","USD approx","Reach","Reach basis","Reports results","IATI id"];
   const L=[head.map(cc).join(",")];
-  rows.forEach(p=>L.push([p.n,(p.desc||""),p.co,p.cc,p.rg,p.d,p.pn,(p.fn||p.r),p.r,p.rt,p.s,p.sc,p.sn,p.sta,p.st,p.en,p._dur,p.c,p.a,p.b,(p._usd==null?"":Math.round(p._usd)),(p.rc===""?"":p.rc),p.rb,(p.re?"Y":"N"),p.id].map(cc).join(",")));
+  rows.forEach(p=>L.push([pName(p),progDesc(p),p.co,p.cc,p.rg,p.d,p.pn,i18n(p.fn||p.r),i18n(p.r),p.rt,p.s,p.sc,p.sn,p.sta,p.st,p.en,p._dur,p.c,p.a,p.b,(p._usd==null?"":Math.round(p._usd)),(p.rc===""?"":p.rc),i18n(p.rb),(p.re?"Y":"N"),p.id].map(cc).join(",")));
   dl("benchmark_programmes_filtered.csv",L.join("\n")); }
 function exportOutcomes(){ const rows=sortRows(filterOutcomes(),OS.sort,OS.dir);
   const head=["Programme","Stream","Sector","Type","Indicator","Measure","Baseline","Target","Actual","Achieved (act/tgt)"];
@@ -225,6 +242,21 @@ function buildFX(){ const wrap=document.getElementById("fx"); if(!wrap) return; 
   wrap.querySelectorAll("input").forEach(inp=>inp.addEventListener("input",e=>{ const v=parseFloat(e.target.value);
     RATES[e.target.dataset.cur]=isNaN(v)?undefined:v; recomputeUSD(); renderPrograms(); renderBenchmarks(); if(typeof renderPlanRec==="function"){renderPlanRec();renderPlanCalc();} })); }
 
+/* Recent-IATI-universe table (#read_me) — built from TOTALS so it stays in sync
+ * as sectors are added (TOTALS is populated by add_sector.py). Stream falls back
+ * to the sector's stream as seen in the data; count shows "—" until extracted. */
+/* Sidebar/footer counts — kept in sync with the actual data (so adding programmes
+ * via add_uae.py / add_sector.py is reflected everywhere, not just the grid). */
+function renderMeta(){ const np=PROGRAMS.length, nc=uniq(PROGRAMS,"co").length, no=OUTCOMES.length;
+  const set=(id,v)=>{ const e=document.getElementById(id); if(e) e.textContent=v; };
+  set("m-nprog",nf.format(np)); set("f-nprog",nf.format(np));
+  set("m-ncountry",nc); set("f-ncountry",nc); set("m-ncountry2",nc); set("f-nout",nf.format(no)); }
+function renderUniverse(){ const tb=document.getElementById("iati-universe"); if(!tb) return;
+  const snStream={}; PROGRAMS.forEach(p=>{ if(p.sn&&!(p.sn in snStream)) snStream[p.sn]=p.s; });
+  tb.innerHTML=SECTORS.map(function(s){ const t=TOTALS[s]||{};
+    const st=t.stream||snStream[s]||"—", rt=(t.recent_total!=null)?nf.format(t.recent_total):"—";
+    return "<tr><td>"+esc(s)+"</td><td>"+esc(st)+"</td><td class='c-num'>"+rt+"</td></tr>"; }).join(""); }
+
 /* ---------- data quality / coverage ---------- */
 function dqTile(k,v,s){ return "<div class='dqcard'><div class='dq-k'>"+esc(k)+"</div><div class='dq-v'>"+v+"</div><div class='dq-s'>"+esc(s)+"</div></div>"; }
 function renderDQ(){
@@ -235,9 +267,11 @@ function renderDQ(){
   const bilat=PROGRAMS.filter(p=>p.d==="Bilateral"), bilatProv=bilat.filter(p=>p.pcc).length, multi=PROGRAMS.filter(p=>p.multi).length;
   const years=PROGRAMS.map(p=>p.year).filter(Boolean), ymin=Math.min(...years), ymax=Math.max(...years);
   const O=OUTCOMES.length, oTgt=OUTCOMES.filter(o=>typeof o.tg==="number"&&o.tg>0).length, oAct=OUTCOMES.filter(o=>typeof o.ac==="number").length;
-  const desc=PROGRAMS.filter(p=>p.desc).length;
+  const desc=PROGRAMS.filter(p=>p.summary||p.desc).length;
+  const transl=PROGRAMS.filter(p=>p.name_en).length;
   el.innerHTML=
-    dqTile("English description",pc(desc,N),fmtNum(desc)+" of "+fmtNum(N)+" — real IATI text; rest use a derived summary")+
+    dqTile("English description",pc(desc,N),fmtNum(desc)+" of "+fmtNum(N)+" — IATI text summarised; rest use a derived summary")+
+    (transl?dqTile("Titles translated to English",pc(transl,N),fmtNum(transl)+" non-English titles translated; English titles unchanged"):"")+
     dqTile("Budget priced to USD",pc(priced,N),fmtNum(priced)+" of "+fmtNum(N)+" · "+fmtNum(noCur)+" report no currency")+
     dqTile("Duration derivable",pc(dur,N),"valid start + end dates")+
     dqTile("End date present",pc(end,N),fmtNum(end)+" programmes")+
@@ -310,7 +344,7 @@ function renderPlanRec(){
   if(provTopStr) h+="<p class='pmix'>Typical providing countries: <b>"+provTopStr+"</b></p>";
   if(ach) h+="<p class='pach'>Reality check: across <b>"+ach.n+"</b> comparable indicators with a target and an actual, the median actual was <b>"+Math.round(ach.med*100)+"%</b> of target; "+Math.round(ach.hit75*100)+"% reached ≥75%. <span class='muted'>IATI target/actual data is noisy — design to expected actuals, not nominal targets.</span></p>";
   h+="<div class='pcomp'><div class='pcomp-h'>Comparable programmes — pick one to start from, or use the cohort median</div>"+comp.map(p=>
-    "<div class='pcomp-row' data-i='"+p._i+"'><div class='pcomp-info crow-click' data-i='"+p._i+"'><span class='pcn'>"+esc(p.n)+"</span><span class='pcm'>"+esc(p.co)+" · "+chip(p.d)+" · "+fmtUSD(p._usd)+" · "+(p._dur==null?"—":p._dur+" mo")+" · <span class='rowmore'>open ›</span></span></div><button class='pl-use-proj' data-i='"+p._i+"' title='Start your plan from this programme'>Use →</button></div>").join("")+"</div>";
+    "<div class='pcomp-row' data-i='"+p._i+"'><div class='pcomp-info crow-click' data-i='"+p._i+"'><span class='pcn'>"+esc(pName(p))+"</span><span class='pcm'>"+esc(p.co)+" · "+chip(p.d)+" · "+fmtUSD(p._usd)+" · "+(p._dur==null?"—":p._dur+" mo")+" · <span class='rowmore'>open ›</span></span></div><button class='pl-use-proj' data-i='"+p._i+"' title='Start your plan from this programme'>Use →</button></div>").join("")+"</div>";
   h+="<button id='pl-use' class='btn'>Use cohort median as a starting point →</button>";
   el.innerHTML=h;
   const u=document.getElementById("pl-use"); if(u) u.addEventListener("click",()=>seedPlan(b.med,d.med,"cohort median"));
@@ -326,7 +360,7 @@ function seedFromProject(p){
   if(!p) return;
   PL.budget=p._usd!=null?Math.round(p._usd):null; PL.dur=p._dur!=null?p._dur:null;
   PL.target=(typeof p.rc==="number")?p.rc:(PL.need||null);
-  PL.base={budget:PL.budget,target:PL.target}; PL.source="project: "+p.n;
+  PL.base={budget:PL.budget,target:PL.target}; PL.source="project: "+pName(p);
   setVal("pl-budget",PL.budget); setVal("pl-dur",PL.dur); setVal("pl-target",PL.target);
   renderPlanCalc(); scrollToPlan();
 }
@@ -522,19 +556,21 @@ function descOutputs(p){
   if(!os.length) return [];
   os.sort((a,b)=>(a.t==="output"?0:1)-(b.t==="output"?0:1));   // concrete outputs first
   const seen=new Set(), items=[];
-  for(const o of os){ let t=(o.i||"").replace(/\s+/g," ").trim(); if(!t) continue; if(t.length>90) t=t.slice(0,88)+"…";
+  for(const o of os){ let t=(i18n(o.i)||"").replace(/\s+/g," ").trim(); if(!t) continue; if(t.length>90) t=t.slice(0,88)+"…";
     const k=t.toLowerCase(); if(seen.has(k)) continue; seen.add(k); items.push(t); if(items.length>=3) break; }
   return items;
 }
 function progDesc(p){
+  if(p.summary) return p.summary;                            // LLM one-line core-activities summary (enrich_llm.py)
   if(p.desc) return p.desc;                                   // real IATI description (enriched)
   let s=SECTOR_DESC[p.sn]||((p.sn||"Development")+" programme.");
   const outs=descOutputs(p);
   if(outs.length) s+=" Reported outputs include "+outs.join("; ")+".";
-  else if(p.rb) s+=" Activity tracked: "+p.rb+".";
+  else if(p.rb) s+=" Activity tracked: "+i18n(p.rb)+".";
   return s;
 }
-function progDescIsReal(p){ return !!p.desc; }
+function progDescIsReal(p){ return !!(p.summary||p.desc); }
+function progDescFull(p){ return p.desc||null; }             // full IATI text, if any (behind "Show more")
 function eatt(s){ return esc(s); }
 function cf(k,v){ return "<div class='cfield'><span class='ck'>"+k+"</span><span class='cv'>"+v+"</span></div>"; }
 function cfBig(k,v){ return "<div class='cfield'><span class='ck'>"+k+"</span><span class='cv big'>"+v+"</span></div>"; }
@@ -547,16 +583,26 @@ function openCard(p){ if(!p) return;
   const dpAct="https://d-portal.org/ctrack.html#view=act&aid="+encodeURIComponent(p.id);
   const dpRaw="https://d-portal.org/q.html?aid="+encodeURIComponent(p.id);
   const os=OUTCOMES.filter(o=>o.n===p.n);
-  let h="<div class='cardh'><h2>"+esc(p.n)+"</h2><div class='sub'>"+statusPill(p.sta)+chip(p.d)+"<span>"+esc(p.sn)+"</span><span class='muted'>· "+esc(p.s)+"</span>"+((p.d==="Bilateral"&&p.pcc)?"<span class='flow'>"+esc(p.pcc)+" → "+esc(p.cc)+"</span>":"")+"</div></div>";
-  const _ad=progDesc(p), _along=_ad.length>200;
-  h+="<div class='cardsec cabout-sec'><p class='cabout"+(_along?" clamp":"")+"'>"+esc(_ad)+"</p>"+(_along?"<button class='cmore' type='button'>Show more</button>":"")+"<span class='tagmini"+(progDescIsReal(p)?" rep":"")+"'>"+(progDescIsReal(p)?"reported — IATI activity description":"derived — inferred from sector &amp; reported indicators")+"</span></div>";
-  h+="<div class='cardsec'><div class='cardgrid'>"+cf("Receiving country",esc(p.co)+(p.multi?" <span class='muted'>(+ others)</span>":""))+((p.d==="Bilateral")?cf("Providing country",(p.pn?esc(p.pn)+" <span class='muted'>("+esc(p.pcc)+", inferred)</span>":"—")):"")+cf("Funder",esc(p.fn||p.r||"—"))+cf("Region",esc(p.rg))+cf("Reporting org",esc(p.r)+" <span class='muted'>("+esc(p.rt||"—")+")</span>")+cf("Sector code",esc(p.sc))+"</div></div>";
+  let h="<div class='cardh'><h2>"+esc(pName(p))+"</h2><div class='sub'>"+statusPill(p.sta)+chip(p.d)+"<span>"+esc(p.sn)+"</span><span class='muted'>· "+esc(p.s)+"</span>"+((p.d==="Bilateral"&&p.pcc)?"<span class='flow'>"+esc(p.pcc)+" → "+esc(p.cc)+"</span>":"")+"</div></div>";
+  const _ad=progDesc(p), _full=progDescFull(p);
+  const _hasFull=!!(_full&&_full!==_ad&&_full.length>_ad.length+10);   // a longer IATI description sits behind the summary
+  const _along=!_hasFull&&_ad.length>200;
+  h+="<div class='cardsec cabout-sec'><p class='cabout"+(_along?" clamp":"")+"'>"+esc(_ad)+"</p>"+
+     (_hasFull?"<p class='cabout-full' hidden>"+esc(_full)+"</p>":"")+
+     ((_hasFull||_along)?"<button class='cmore' type='button'>Show more</button>":"")+
+     "<span class='tagmini"+(progDescIsReal(p)?" rep":"")+"'>"+(progDescIsReal(p)?"reported — IATI activity description":"derived — inferred from sector &amp; reported indicators")+"</span></div>";
+  h+="<div class='cardsec'><div class='cardgrid'>"+cf("Receiving country",esc(p.co)+(p.multi?" <span class='muted'>(+ others)</span>":""))+((p.d==="Bilateral")?cf("Providing country",(p.pn?esc(p.pn)+" <span class='muted'>("+esc(p.pcc)+", inferred)</span>":"—")):"")+cf("Funder",esc(i18n(p.fn||p.r)||"—"))+cf("Region",esc(p.rg))+cf("Reporting org",esc(i18n(p.r))+" <span class='muted'>("+esc(p.rt||"—")+")</span>")+cf("Sector code",esc(p.sc))+"</div></div>";
   h+="<div class='cardsec'><h3>Finance &amp; timeline</h3><div class='cardgrid'>"+cfBig("Budget",esc(p.c)+" "+nf.format(Math.round(p.a)))+cfBig(BASIS==="real"?"≈ real 2024 USD":"≈ nominal USD",fmtUSD(p._usd))+cf("FX applied",esc(fxNote(p)))+cf("Reported as",esc(p.b||"—"))+cf("Start",esc(p.st||"—"))+cf("End",esc(p.en||"—"))+cf("Duration",(p._dur==null?"—":p._dur+" months"))+"</div></div>";
   let rr=cf("Reach (reported)",(p.rc===""||p.rc==null)?"—":fmtNum(p.rc));
-  if(p.rc&&p.rb) rr+=cf("Reach indicator",esc(p.rb));
-  rr+=cf("Reports results?",p.re?"Yes":"No");
+  if(p.rc&&p.rb) rr+=cf("Reach indicator",esc(i18n(p.rb)));
+  let resVal;
+  if(os.length) resVal="Yes — <button class='olink o-open' type='button' data-name=\""+eatt(p.n)+"\">view "+os.length+" indicator"+(os.length>1?"s":"")+" →</button>";
+  else if(p.re) resVal="Yes <span class='muted'>(no indicator-level rows in this sample)</span>";
+  else resVal="No";
+  rr+=cf("Reports results?",resVal);
   h+="<div class='cardsec'><h3>Reach &amp; results</h3><div class='cardgrid'>"+rr+"</div>";
-  if(os.length) h+="<table class='cotable'><thead><tr><th>Indicator</th><th>Base</th><th>Target</th><th>Actual</th></tr></thead><tbody>"+os.slice(0,12).map(o=>"<tr><td class='ind'>"+esc(i18n(o.i)||o.t||"—")+"</td><td>"+fnum(o.bl)+"</td><td>"+fnum(o.tg)+"</td><td>"+fnum(o.ac)+"</td></tr>").join("")+"</tbody></table>";
+  if(os.length){ h+="<table class='cotable'><thead><tr><th>Indicator</th><th>Base</th><th>Target</th><th>Actual</th></tr></thead><tbody>"+os.slice(0,12).map(o=>"<tr><td class='ind'>"+esc(i18n(o.i)||o.t||"—")+"</td><td>"+fnum(o.bl)+"</td><td>"+fnum(o.tg)+"</td><td>"+fnum(o.ac)+"</td></tr>").join("")+"</tbody></table>";
+    h+="<button class='cbtn o-open' data-name=\""+eatt(p.n)+"\">Open all "+os.length+" in Reported outcomes →</button>"; }
   h+="</div>";
   h+="<div class='cardsec'><h3>Source</h3><div class='csrc'>"+
      "<div class='csrc-row'><a class='cbtn prim' href=\""+eatt(dpAct)+"\" target='_blank' rel='noopener'>Open in d-portal ↗</a>"+
@@ -568,10 +614,19 @@ function openCard(p){ if(!p) return;
   document.getElementById("cardBody").innerHTML=h;
   const m=document.getElementById("cardModal"); m.hidden=false;
   m.querySelectorAll("[data-copy]").forEach(btn=>btn.addEventListener("click",()=>copyText(btn.getAttribute("data-copy"),btn)));
-  const _more=m.querySelector(".cmore"); if(_more) _more.addEventListener("click",()=>{ const pEl=m.querySelector(".cabout"); const ex=pEl.classList.toggle("expanded"); pEl.classList.toggle("clamp",!ex); _more.textContent=ex?"Show less":"Show more"; });
+  m.querySelectorAll(".o-open").forEach(b=>b.addEventListener("click",()=>openOutcomesFor(b.getAttribute("data-name"))));
+  const _more=m.querySelector(".cmore"); if(_more) _more.addEventListener("click",()=>{ const pEl=m.querySelector(".cabout"); const full=m.querySelector(".cabout-full");
+    if(full){ const show=full.hasAttribute("hidden"); if(show){ full.removeAttribute("hidden"); pEl.setAttribute("hidden",""); _more.textContent="Show less"; } else { full.setAttribute("hidden",""); pEl.removeAttribute("hidden"); _more.textContent="Show more"; } }
+    else { const ex=pEl.classList.toggle("expanded"); pEl.classList.toggle("clamp",!ex); _more.textContent=ex?"Show less":"Show more"; } });
 }
 
 function setText(id,v){ const el=document.getElementById(id); if(el) el.textContent=v; }
+function openOutcomesFor(name){
+  Object.assign(OS,{prog:name,q:"",s:"",sn:"",t:"",page:1});   // isolate this programme's indicators
+  closeCard();
+  showView("outcomes");           // toggles view + syncURL
+  reflectControls(); renderOutcomes();
+}
 function showView(name){
   CURRENT_VIEW=name;
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("show",v.id==="view-"+name));
@@ -607,6 +662,7 @@ function syncURL(){
     if(PS.page>1)qp.set("page",PS.page); if(PS.size!==50)qp.set("size",PS.size>=1e9?"all":PS.size);
   } else if(CURRENT_VIEW==="outcomes"){
     if(OS.q)qp.set("q",OS.q); if(OS.s)qp.set("stream",OS.s); if(OS.sn)qp.set("sector",OS.sn); if(OS.t)qp.set("type",OS.t);
+    if(OS.prog)qp.set("prog",OS.prog);
     if(OS.sort!=="_ach")qp.set("sort",OS.sort); if(OS.dir!==-1)qp.set("dir",OS.dir);
     if(OS.page>1)qp.set("page",OS.page); if(OS.size!==50)qp.set("size",OS.size>=1e9?"all":OS.size);
   } else if(CURRENT_VIEW==="countries"){
@@ -627,7 +683,7 @@ function route(){
   const plannerIntent = view==="plan"||qp.has("target")||qp.has("budget")||qp.has("duration")||qp.has("people");
   if(plannerIntent){ initPlanFromURL(); return; }
   if(view==="outcomes"){
-    OS.q=qp.get("q")||""; OS.s=qp.get("stream")||""; OS.sn=qp.get("sector")||""; OS.t=qp.get("type")||"";
+    OS.q=qp.get("q")||""; OS.s=qp.get("stream")||""; OS.sn=qp.get("sector")||""; OS.t=qp.get("type")||""; OS.prog=qp.get("prog")||"";
     if(qp.get("sort"))OS.sort=qp.get("sort"); if(qp.get("dir"))OS.dir=+qp.get("dir");
     if(qp.get("page"))OS.page=+qp.get("page"); const z=qp.get("size"); if(z)OS.size=(z==="all"?1e9:+z);
   } else if(view==="countries"){
@@ -687,7 +743,7 @@ function renderCharts(){
   const yc={}; rows.forEach(p=>{ if(p.year&&p.year>=2012) yc[p.year]=(yc[p.year]||0)+1; });
   const years=Object.keys(yc).map(Number).sort((a,b)=>a-b);
   const c2=svgBars(years.map(y=>({l:String(y),v:yc[y]})),{rot:years.length>10});
-  const pts=rows.filter(p=>p._usd!=null&&p._dur!=null&&p._dur>0).map(p=>({x:p._usd,y:p._dur,t:p.n+" · "+fmtCompact(p._usd)+" · "+p._dur+"mo"}));
+  const pts=rows.filter(p=>p._usd!=null&&p._dur!=null&&p._dur>0).map(p=>({x:p._usd,y:p._dur,t:pName(p)+" · "+fmtCompact(p._usd)+" · "+p._dur+"mo"}));
   const c3=svgScatter(pts,{});
   // 4th chart: by region normally, but by sector when a single region is selected
   let c4,c4t,c4s;
@@ -727,7 +783,7 @@ function renderCountry(){
   h+="<div class='cp-grid2'>"+
     "<div class='cp-panel'><h3>By sector</h3>"+cyBars(secs)+"</div>"+
     "<div class='cp-panel'><h3>By donor type</h3>"+cyBars(donors)+(provs.length?"<h3 class='cp-h2'>Top providing countries</h3>"+cyBars(provs):"")+"</div></div>";
-  h+="<div class='cp-panel'><h3>Recent programmes</h3>"+recent.map(p=>"<div class='cp-prog crow-click' data-i='"+p._i+"'><span class='pcn'>"+esc(p.n)+"</span><span class='pcm'>"+esc(p.sn)+" · "+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+esc(p.st||"—")+" · <span class='rowmore'>open ›</span></span></div>").join("")+"</div>";
+  h+="<div class='cp-panel'><h3>Recent programmes</h3>"+recent.map(p=>"<div class='cp-prog crow-click' data-i='"+p._i+"'><span class='pcn'>"+esc(pName(p))+"</span><span class='pcm'>"+esc(p.sn)+" · "+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+esc(p.st||"—")+" · <span class='rowmore'>open ›</span></span></div>").join("")+"</div>";
   h+="</div>";
   el.innerHTML=h;
   const g=document.getElementById("cy-grid"); if(g) g.addEventListener("click",()=>{ Object.assign(PS,{q:"",d:"",rg:"",co:CY.country,sc:"",sta:"",re:"",prov:"",page:1}); reflectControls(); showView("programmes"); renderPrograms(); });
@@ -772,6 +828,7 @@ function init(){
   on("export","click",exportPrograms);
 
   on("oq","input",e=>{OS.q=e.target.value;OS.page=1;renderOutcomes();});
+  const _pf=document.getElementById("o-progfilter"); if(_pf) _pf.addEventListener("click",e=>{ if(e.target.closest("#o-progclear")){ OS.prog="";OS.page=1;renderOutcomes();syncURL(); } });
   on("o-stream","change",e=>{OS.s=e.target.value;OS.page=1;renderOutcomes();});
   on("o-sector","change",e=>{OS.sn=e.target.value;OS.page=1;renderOutcomes();});
   on("o-type","change",e=>{OS.t=e.target.value;OS.page=1;renderOutcomes();});
@@ -812,7 +869,7 @@ function init(){
     const use=e.target.closest&&e.target.closest(".pl-use-proj"); if(use){ seedFromProject(PROGRAMS[+use.getAttribute("data-i")]); return; }
     const info=e.target.closest&&e.target.closest(".pcomp-info[data-i]"); if(info) openCard(PROGRAMS[+info.getAttribute("data-i")]); });
 
-  setTheme("light"); buildFX(); renderDQ(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
+  setTheme("light"); renderMeta(); buildFX(); renderUniverse(); renderDQ(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
   route(); URL_READY=true; syncURL();
 }
 document.addEventListener("DOMContentLoaded",init);
