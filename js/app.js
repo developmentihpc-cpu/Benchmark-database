@@ -785,8 +785,44 @@ function renderCharts(){
 }
 
 /* ---------- Country profiles ---------- */
-const CY={country:""};
+const CY={country:"",by:"sector"};
 function cyTop(rows,key,n){ const m={}; rows.forEach(r=>{const k=r[key]; if(k) m[k]=(m[k]||0)+1;}); return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,n); }
+/* ISO2 → flag emoji (regional indicators). Renders as a flag on macOS/iOS/Android
+ * and most browsers; on Windows, which lacks flag glyphs, it shows the 2-letter
+ * code — still identifies the country. */
+function flagEmoji(cc){ if(!cc||!/^[A-Za-z]{2}$/.test(cc)) return ""; const B=0x1F1E6,U=cc.toUpperCase();
+  return String.fromCodePoint(B+U.charCodeAt(0)-65)+String.fromCodePoint(B+U.charCodeAt(1)-65); }
+/* Left icon for a programme row in the Countries tab: providing-country flag for
+ * bilaterals, else a monogram badge of the funder coloured by donor type. */
+function cyProgIcon(p){
+  if(p.d==="Bilateral"&&p.pcc){ const f=flagEmoji(p.pcc);
+    return "<span class='cp-pic flag' title='"+esc((p.pn||p.pcc)+" — providing country")+"'>"+(f||esc(p.pcc))+"</span>"; }
+  const nm=(i18n(p.r)||p.d||"?").replace(/[^A-Za-z ]/g," ").trim();
+  const ini=((nm.split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0]).join(""))||"?").toUpperCase();
+  return "<span class='cp-pic mono' style='--c:"+(DONOR_COLORS[p.d]||"#8A98A3")+"' title='"+esc(i18n(p.r)||p.d)+"'>"+esc(ini)+"</span>";
+}
+function cyProgRow(p,showSector){
+  return "<div class='cp-prog crow-click' data-i='"+p._i+"' tabindex='0' role='button' aria-label='Open programme details'>"+
+    cyProgIcon(p)+"<span class='cp-prog-txt'><span class='pcn'>"+esc(pName(p))+"</span><span class='pcm'>"+
+    (showSector?esc(p.sn)+" · ":"")+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+(p._dur==null?"—":p._dur+" mo")+" · "+esc(p.st||"—")+" · <span class='rowmore'>open ›</span></span></span></div>";
+}
+/* The combined "Programmes" browser — grouped by sector or by donor type per the
+ * CY.by toggle. Sector groups also surface the indicators overview. */
+function cyGroupHTML(label,list,linkType,withIndicators){
+  const sorted=list.slice().sort((a,b)=>(b._usd||0)-(a._usd||0));
+  const mb=fmtCompact(median(list.map(x=>x._usd)));
+  return "<details class='cp-secgroup'><summary>"+
+      "<span class='cp-sg-name'>"+esc(label)+"</span>"+
+      "<span class='cp-sg-meta'>"+list.length+" programme"+(list.length>1?"s":"")+" · median "+mb+"</span>"+
+      "<button type='button' class='cp-sg-plan' data-link='"+linkType+"' data-val=\""+eatt(label)+"\" title='Plan in "+esc(CY.country)+" scoped to "+esc(label)+"'>plan ›</button>"+
+    "</summary>"+(withIndicators?cySectorIndicators(list):"")+
+    "<div class='cp-sg-list'>"+sorted.map(p=>cyProgRow(p,!withIndicators)).join("")+"</div></details>";
+}
+function cyGroups(rows,secMap){
+  if(CY.by==="donor"){ const dm={}; rows.forEach(r=>{(dm[r.d]=dm[r.d]||[]).push(r);});
+    return Object.keys(dm).sort((a,b)=>dm[b].length-dm[a].length).map(d=>cyGroupHTML(d,dm[d],"donor",false)).join(""); }
+  return Object.keys(secMap).sort((a,b)=>secMap[b].length-secMap[a].length).map(s=>cyGroupHTML(s,secMap[s],"sector",true)).join("");
+}
 function cyBars(items,linkType){ const max=Math.max(1,...items.map(d=>d.v));
   return items.map(d=>{ const inner="<span class='cp-bl'>"+esc(d.l)+"</span><span class='cp-bar'><span style='width:"+Math.round(100*d.v/max)+"%'></span></span><span class='cp-bv'>"+esc(d.disp||String(d.v))+"</span>";
     return linkType
@@ -855,34 +891,41 @@ function renderCountry(){
     "<div class='cp-card'><div class='cp-k'>Median budget</div><div class='cp-v'>"+fmtCompact(medB)+"</div></div>"+
     "<div class='cp-card'><div class='cp-k'>Median duration</div><div class='cp-v'>"+(medD==null?"—":Math.round(medD)+" mo")+"</div></div>"+
     "<div class='cp-card'><div class='cp-k'>Report results</div><div class='cp-v'>"+fmtPct(resPct)+"</div><div class='cp-cs'>"+fmtNum(wr)+" of "+fmtNum(rows.length)+"</div></div></div>";
-  // ── who funds, on what ──
-  h+="<div class='cp-grid2'>"+
-    "<div class='cp-panel'><h3>By sector <span class='cp-hint'>click to plan</span></h3>"+cyBars(secs,"sector")+"</div>"+
-    "<div class='cp-panel'><h3>By donor type <span class='cp-hint'>click to plan</span></h3>"+cyBars(donors,"donor")+(provs.length?"<h3 class='cp-h2'>Top providing countries <span class='cp-inf'>(inferred)</span></h3>"+cyBars(provs,"prov"):"")+"</div></div>";
-  // ── programmes by sector, each expandable to its indicators + programmes ──
-  h+="<div class='cp-panel cp-bysector'><h3>Programmes by sector <span class='cp-hint'>open a sector for its indicators &amp; programmes</span></h3>"+secs.map(function(sec){
-      const list=secMap[sec.l].slice().sort((a,b)=>(b._usd||0)-(a._usd||0));
-      const mb=fmtCompact(median(secMap[sec.l].map(x=>x._usd)));
-      return "<details class='cp-secgroup'><summary><span class='cp-sg-name'>"+esc(sec.l)+"</span><span class='cp-sg-meta'>"+sec.v+" programme"+(sec.v>1?"s":"")+" · median "+mb+"</span></summary>"+
-        cySectorIndicators(list)+
-        "<div class='cp-sg-list'>"+list.map(p=>"<div class='cp-prog crow-click' data-i='"+p._i+"' tabindex='0' role='button' aria-label='Open programme details'><span class='pcn'>"+esc(pName(p))+"</span><span class='pcm'>"+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+(p._dur==null?"—":p._dur+" mo")+" · "+esc(p.st||"—")+" · <span class='rowmore'>open ›</span></span></div>").join("")+"</div>"+
-      "</details>";
-    }).join("")+"</div>";
-  // ── recent activity ──
-  h+="<div class='cp-panel'><h3>Recent programmes</h3>"+recent.map(p=>"<div class='cp-prog crow-click' data-i='"+p._i+"' tabindex='0' role='button' aria-label='Open programme details'><span class='pcn'>"+esc(pName(p))+"</span><span class='pcm'>"+esc(p.sn)+" · "+chip(p.d)+" · "+fmtCompact(p._usd)+" · "+esc(p.st||"—")+" · <span class='rowmore'>open ›</span></span></div>").join("")+"</div>";
+  // ── providing countries grid (right column) ──
+  const provFull=cyTop(rows.filter(r=>r.pcc),"pn",10).map(([pn,v],i)=>({pn,v,rank:i+1,pcc:(rows.find(r=>r.pn===pn)||{}).pcc||""}));
+  const provGrid="<div class='cp-panel'><h3>Top providing countries <span class='cp-inf'>(inferred)</span></h3>"+
+    (provFull.length?"<div class='cp-flag-grid'>"+provFull.map(x=>
+      "<button type='button' class='cp-flagcell' data-prov=\""+eatt(x.pn)+"\" title='Plan in "+esc(CY.country)+" · "+esc(x.pn)+"'>"+
+        "<span class='cp-fc-rank'>"+x.rank+"</span><span class='cp-fc-flag'>"+(flagEmoji(x.pcc)||esc(x.pcc||"—"))+"</span>"+
+        "<span class='cp-fc-name'>"+esc(x.pn)+"</span><span class='cp-fc-n'>"+x.v+"</span></button>").join("")+"</div>"
+      :"<p class='muted'>No bilateral providers identified for this country.</p>")+"</div>";
+  // ── main: combined programmes browser (sector ↔ donor toggle) + right column ──
+  h+="<div class='cp-main'><div class='cp-col-main'><div class='cp-panel'>"+
+     "<div class='cp-panel-head'><h3>Programmes</h3>"+
+       "<div class='cp-toggle' role='tablist'>"+
+         "<button type='button' class='cp-tog"+(CY.by==="sector"?" on":"")+"' data-by='sector'>By sector</button>"+
+         "<button type='button' class='cp-tog"+(CY.by==="donor"?" on":"")+"' data-by='donor'>By donor type</button>"+
+       "</div></div>"+
+     "<p class='cp-hint cp-hint-block'>Open a group for its "+(CY.by==="sector"?"indicators &amp; ":"")+"programmes; hover a header to plan that "+(CY.by==="sector"?"sector":"donor type")+".</p>"+
+     "<div class='cp-groups'>"+cyGroups(rows,secMap)+"</div>"+
+     "</div></div>"+
+     "<div class='cp-col-side'>"+provGrid+
+       "<div class='cp-panel'><h3>Recent programmes</h3>"+recent.map(p=>cyProgRow(p,true)).join("")+"</div>"+
+     "</div></div>";
   h+="</div>";
   el.innerHTML=h;
   const g=document.getElementById("cy-grid"); if(g) g.addEventListener("click",()=>{ Object.assign(PS,{q:"",d:"",rg:"",co:CY.country,sc:"",sta:"",re:"",prov:"",page:1}); reflectControls(); showView("programmes"); renderPrograms(); });
   const pl=document.getElementById("cy-plan"); if(pl) pl.addEventListener("click",()=>{ PL.country=CY.country; setVal("pl-country",PL.country); showView("plan"); renderPlanRec(); renderPlanCalc(); });
   el.querySelectorAll(".cp-prog[data-i]").forEach(r=>r.addEventListener("click",()=>openCard(PROGRAMS[+r.getAttribute("data-i")])));
-  // deep-link the sector/donor/provider bars into the planner, scoped to this country
-  el.querySelectorAll(".cp-bar-link").forEach(b=>b.addEventListener("click",()=>{
-    const lt=b.getAttribute("data-link"), val=b.getAttribute("data-val");
-    PL.country=CY.country;
+  // group-by toggle (sector ↔ donor type)
+  el.querySelectorAll(".cp-tog").forEach(b=>b.addEventListener("click",()=>{ CY.by=b.getAttribute("data-by"); renderCountry(); }));
+  // deep-link a group header / provider cell into the planner, scoped to this country
+  const planScope=(lt,val)=>{ PL.country=CY.country; PL.donor=""; PL.prov="";
     if(lt==="donor") PL.donor=val; else if(lt==="prov") PL.prov=val; else if(lt==="sector") PL.sector=val;
     setVal("pl-country",PL.country); setVal("pl-donor",PL.donor); setVal("pl-prov",PL.prov); setVal("pl-sector",PL.sector);
-    showView("plan"); renderPlanRec(); renderPlanCalc();
-  }));
+    showView("plan"); renderPlanRec(); renderPlanCalc(); };
+  el.querySelectorAll(".cp-sg-plan").forEach(b=>b.addEventListener("click",e=>{ e.preventDefault(); e.stopPropagation(); planScope(b.getAttribute("data-link"),b.getAttribute("data-val")); }));
+  el.querySelectorAll(".cp-flagcell").forEach(b=>b.addEventListener("click",()=>planScope("prov",b.getAttribute("data-prov"))));
   syncURL();
 }
 
