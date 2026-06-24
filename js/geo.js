@@ -5,6 +5,9 @@
  * (x = 180 + lng, y = 90 - lat) into a 360×180 canvas. Centroids are approximate
  * (locator accuracy, not survey accuracy); unknown countries fall back to their
  * region centre. */
+/* ISO2 codes for which a vendored flag SVG exists in assets/flags/ (from
+ * flag-icons by lipis, MIT — see assets/flags/LICENSE). */
+const FLAG_CC = new Set(["de","gb","fi","ca","be","ch","us","nl","fr","au","ae","dk","nz","kr","no","it","se","bj","jp","es","ie","br","eu","bo","cn","mz","hn","mm","ls","af","gm","cd","mg","at","ro","sa","gn","ru","mn","pl","pk","kw","sk","sl","am","mc"]);
 const GEO_REGION_CENTER = {
   "Sub-Saharan Africa":[20,0], "MENA + Afg/Pak":[45,28], "South Asia":[80,22],
   "East Asia & Pacific":[115,5], "Latin Am. & Carib.":[-65,-15], "Europe & C. Asia":[40,46]

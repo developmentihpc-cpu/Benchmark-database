@@ -787,16 +787,16 @@ function renderCharts(){
 /* ---------- Country profiles ---------- */
 const CY={country:"",by:"sector"};
 function cyTop(rows,key,n){ const m={}; rows.forEach(r=>{const k=r[key]; if(k) m[k]=(m[k]||0)+1;}); return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,n); }
-/* ISO2 → flag emoji (regional indicators). Renders as a flag on macOS/iOS/Android
- * and most browsers; on Windows, which lacks flag glyphs, it shows the 2-letter
- * code — still identifies the country. */
-function flagEmoji(cc){ if(!cc||!/^[A-Za-z]{2}$/.test(cc)) return ""; const B=0x1F1E6,U=cc.toUpperCase();
-  return String.fromCodePoint(B+U.charCodeAt(0)-65)+String.fromCodePoint(B+U.charCodeAt(1)-65); }
+/* Vendored flag SVG (flag-icons, MIT) for an ISO2 code, or "" if not available. */
+function flagImg(cc,alt){ if(!cc) return ""; const lc=cc.toLowerCase();
+  if(typeof FLAG_CC!=="undefined"&&!FLAG_CC.has(lc)) return "";
+  return "<img class='flagimg' src='assets/flags/"+lc+".svg' alt='"+esc(alt||lc.toUpperCase())+"' loading='lazy'>"; }
 /* Left icon for a programme row in the Countries tab: providing-country flag for
  * bilaterals, else a monogram badge of the funder coloured by donor type. */
 function cyProgIcon(p){
-  if(p.d==="Bilateral"&&p.pcc){ const f=flagEmoji(p.pcc);
-    return "<span class='cp-pic flag' title='"+esc((p.pn||p.pcc)+" — providing country")+"'>"+(f||esc(p.pcc))+"</span>"; }
+  if(p.d==="Bilateral"&&p.pcc){ const tip=esc((p.pn||p.pcc)+" — providing country"), fi=flagImg(p.pcc,p.pn||p.pcc);
+    return fi ? "<span class='cp-pic flag' title='"+tip+"'>"+fi+"</span>"
+              : "<span class='cp-pic code' title='"+tip+"'>"+esc(p.pcc)+"</span>"; }
   const nm=(i18n(p.r)||p.d||"?").replace(/[^A-Za-z ]/g," ").trim();
   const ini=((nm.split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0]).join(""))||"?").toUpperCase();
   return "<span class='cp-pic mono' style='--c:"+(DONOR_COLORS[p.d]||"#8A98A3")+"' title='"+esc(i18n(p.r)||p.d)+"'>"+esc(ini)+"</span>";
@@ -896,7 +896,7 @@ function renderCountry(){
   const provGrid="<div class='cp-panel'><h3>Top providing countries <span class='cp-inf'>(inferred)</span></h3>"+
     (provFull.length?"<div class='cp-flag-grid'>"+provFull.map(x=>
       "<button type='button' class='cp-flagcell' data-prov=\""+eatt(x.pn)+"\" title='Plan in "+esc(CY.country)+" · "+esc(x.pn)+"'>"+
-        "<span class='cp-fc-rank'>"+x.rank+"</span><span class='cp-fc-flag'>"+(flagEmoji(x.pcc)||esc(x.pcc||"—"))+"</span>"+
+        "<span class='cp-fc-rank'>"+x.rank+"</span><span class='cp-fc-flag'>"+(flagImg(x.pcc,x.pn)||"<span class='cp-fc-code'>"+esc(x.pcc||"—")+"</span>")+"</span>"+
         "<span class='cp-fc-name'>"+esc(x.pn)+"</span><span class='cp-fc-n'>"+x.v+"</span></button>").join("")+"</div>"
       :"<p class='muted'>No bilateral providers identified for this country.</p>")+"</div>";
   // ── main: combined programmes browser (sector ↔ donor toggle) + right column ──
