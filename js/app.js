@@ -785,7 +785,7 @@ function renderCharts(){
 }
 
 /* ---------- Country profiles ---------- */
-const CY={country:"",by:"sector"};
+const CY={country:"",by:"sector",sideW:0};
 function cyTop(rows,key,n){ const m={}; rows.forEach(r=>{const k=r[key]; if(k) m[k]=(m[k]||0)+1;}); return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0,n); }
 /* Vendored flag SVG (flag-icons, MIT) for an ISO2 code, or "" if not available. */
 function flagImg(cc,alt){ if(!cc) return ""; const lc=cc.toLowerCase();
@@ -900,7 +900,8 @@ function renderCountry(){
         "<span class='cp-fc-name'>"+esc(x.pn)+"</span><span class='cp-fc-n'>"+x.v+"</span></button>").join("")+"</div>"
       :"<p class='muted'>No bilateral providers identified for this country.</p>")+"</div>";
   // ── main: combined programmes browser (sector ↔ donor toggle) + right column ──
-  h+="<div class='cp-main'><div class='cp-col-main'><div class='cp-panel'>"+
+  if(!CY.sideW){ let sw=320; try{ sw=parseInt(localStorage.getItem("bdb_cp_sidew"),10)||320; }catch(e){} CY.sideW=(sw>=240&&sw<=560)?sw:320; }
+  h+="<div class='cp-main' style='--cp-side-w:"+CY.sideW+"px'><div class='cp-col-main'><div class='cp-panel'>"+
      "<div class='cp-panel-head'><h3>Programmes</h3>"+
        "<div class='cp-toggle' role='tablist'>"+
          "<button type='button' class='cp-tog"+(CY.by==="sector"?" on":"")+"' data-by='sector'>By sector</button>"+
@@ -909,6 +910,7 @@ function renderCountry(){
      "<p class='cp-hint cp-hint-block'>Open a group for its "+(CY.by==="sector"?"indicators &amp; ":"")+"programmes; hover a header to plan that "+(CY.by==="sector"?"sector":"donor type")+".</p>"+
      "<div class='cp-groups'>"+cyGroups(rows,secMap)+"</div>"+
      "</div></div>"+
+     "<div class='cp-splitter' role='separator' aria-orientation='vertical' aria-label='Drag to resize columns' tabindex='0' title='Drag to resize'></div>"+
      "<div class='cp-col-side'>"+provGrid+
        "<div class='cp-panel'><h3>Recent programmes</h3>"+recent.map(p=>cyProgRow(p,true)).join("")+"</div>"+
      "</div></div>";
@@ -926,6 +928,18 @@ function renderCountry(){
     showView("plan"); renderPlanRec(); renderPlanCalc(); };
   el.querySelectorAll(".cp-sg-plan").forEach(b=>b.addEventListener("click",e=>{ e.preventDefault(); e.stopPropagation(); planScope(b.getAttribute("data-link"),b.getAttribute("data-val")); }));
   el.querySelectorAll(".cp-flagcell").forEach(b=>b.addEventListener("click",()=>planScope("prov",b.getAttribute("data-prov"))));
+  // draggable splitter — resize the main ↔ side columns (persisted)
+  const sp=el.querySelector(".cp-splitter"), cmain=el.querySelector(".cp-main");
+  if(sp&&cmain){ let drag=false;
+    const setW=w=>{ w=Math.max(240,Math.min(560,Math.round(w))); cmain.style.setProperty("--cp-side-w",w+"px"); CY.sideW=w; };
+    const mv=ev=>{ if(drag){ const r=cmain.getBoundingClientRect(); setW(r.right-ev.clientX); } };
+    const up=()=>{ if(!drag) return; drag=false; document.body.classList.remove("col-resizing");
+      document.removeEventListener("pointermove",mv); document.removeEventListener("pointerup",up); try{localStorage.setItem("bdb_cp_sidew",CY.sideW);}catch(e){} };
+    sp.addEventListener("pointerdown",ev=>{ ev.preventDefault(); drag=true; document.body.classList.add("col-resizing");
+      document.addEventListener("pointermove",mv); document.addEventListener("pointerup",up); });
+    sp.addEventListener("keydown",ev=>{ if(ev.key==="ArrowLeft"||ev.key==="ArrowRight"){ ev.preventDefault();
+      setW((CY.sideW||320)+(ev.key==="ArrowLeft"?20:-20)); try{localStorage.setItem("bdb_cp_sidew",CY.sideW);}catch(e){} } });
+  }
   syncURL();
 }
 
