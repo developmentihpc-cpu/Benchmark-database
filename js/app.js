@@ -264,7 +264,7 @@ const SECTOR_CARDS=[
   {key:"social",title:"Social Protection",color:"#9c4dcc",themes:["social"],
    desc:"Cash transfers, social safety nets and social services.",
    icon:"<svg viewBox='0 0 24 24'><circle cx='9' cy='8' r='3'/><path d='M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6'/><path d='M16 6.2a3 3 0 0 1 0 5.6'/><path d='M21 20c0-2.5-1.5-4.6-3.7-5.5'/></svg>"},
-  {key:"humanitarian",title:"Humanitarian Response",color:"#c0392b",themes:["humanitarian"],
+  {key:"humanitarian",title:"Humanitarian Response",color:"#c0392b",themes:["humanitarian"],ext:"avif",
    desc:"Emergency response, reconstruction and disaster risk reduction.",
    icon:"<svg viewBox='0 0 24 24'><path d='M12 4 3 19h18L12 4Z'/><path d='M12 10v6'/></svg>"}
 ];
@@ -273,7 +273,7 @@ function renderSectors(){
   el.innerHTML=SECTOR_CARDS.map(s=>{
     const n=PROGRAMS.filter(p=>p.sc&&typeof guideTheme==="function"&&s.themes.includes(guideTheme(p.sc))).length;
     return "<div class='sec-card'>"+
-      "<div class='sec-img' style='--c:"+s.color+"'><img src='assets/sectors/"+s.key+".jpg' alt='"+eatt(s.title)+"' loading='lazy'>"+
+      "<div class='sec-img' style='--c:"+s.color+"'><img src='assets/sectors/"+s.key+"."+(s.ext||"jpg")+"' alt='"+eatt(s.title)+"' loading='lazy'>"+
         "<span class='sec-ghost'>"+s.icon+"</span>"+
         "<span class='sec-icon' style='--c:"+s.color+"'>"+s.icon+"</span></div>"+
       "<div class='sec-body'><h3>"+esc(s.title)+"</h3><p>"+esc(s.desc)+"</p>"+

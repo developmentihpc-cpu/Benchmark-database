@@ -27,7 +27,7 @@ my %MIME = (
   map  => 'application/json; charset=utf-8',
   svg  => 'image/svg+xml',
   png  => 'image/png',  jpg => 'image/jpeg', jpeg => 'image/jpeg',
-  gif  => 'image/gif',  ico => 'image/x-icon', webp => 'image/webp',
+  gif  => 'image/gif',  ico => 'image/x-icon', webp => 'image/webp', avif => 'image/avif',
   woff => 'font/woff',  woff2 => 'font/woff2', ttf => 'font/ttf',
   txt  => 'text/plain; charset=utf-8',
 );
