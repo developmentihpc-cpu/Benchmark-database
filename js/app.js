@@ -177,10 +177,10 @@ function renderOutcomes(){
   renderHead("oh",OCOLS,OS); syncURL();
 }
 
-function groupStats(fn){ const r=PROGRAMS.filter(fn); const b=statsOf(r,"_usd"); return {n:r.length,mb:b.med,b25:b.p25,b75:b.p75,md:median(r.map(x=>x._dur)),
-  pr:r.length?r.filter(x=>x.re).length/r.length:null}; }
+function groupStats(fn){ const r=PROGRAMS.filter(fn); const b=statsOf(r,"_usd"); const wr=r.filter(x=>x.re).length; return {n:r.length,mb:b.med,b25:b.p25,b75:b.p75,md:median(r.map(x=>x._dur)),
+  wr:wr, pr:r.length?wr/r.length:null}; }
 function btable(title,sub,desc,specs,labelHdr,showTotal,showDot){
-  const stats=specs.map(s=>{const g=groupStats(s.fn); return {lab:s.lab,total:s.total,n:g.n,mb:g.mb,b25:g.b25,b75:g.b75,md:g.md,pr:g.pr};});
+  const stats=specs.map(s=>{const g=groupStats(s.fn); return {lab:s.lab,total:s.total,n:g.n,mb:g.mb,b25:g.b25,b75:g.b75,md:g.md,pr:g.pr,wr:g.wr};});
   const vals=[]; stats.forEach(s=>[s.b25,s.mb,s.b75].forEach(v=>{ if(typeof v==="number"&&v>0) vals.push(v); }));
   const lo=vals.length?Math.min(...vals):1, hi=vals.length?Math.max(...vals):10;
   const la=Math.log(Math.max(1,lo)), lb=Math.log(Math.max(2,hi)), span=(lb-la)||1;
@@ -199,7 +199,7 @@ function btable(title,sub,desc,specs,labelHdr,showTotal,showDot){
      "<td class='c-num'>"+s.n+(thin?" <span class='bt-thin' title='Fewer than 8 comparable programmes — treat this median as indicative'>⚠</span>":"")+"</td>"+
      "<td class='bcell'><div class='bcell-in'>"+cell+"</div></td>"+
      "<td class='c-num'>"+(s.md==null?"—":s.md)+"</td>"+
-     "<td class='c-num'>"+fmtPct(s.pr)+"</td>"+
+     "<td class='c-num'>"+fmtPct(s.pr)+(s.n?"<span class='bt-denom'>"+fmtNum(s.wr)+" of "+fmtNum(s.n)+"</span>":"")+"</td>"+
      (showTotal?"<td class='c-num dim'>"+fmtNum(s.total)+"</td>":"")+"</tr>"; });
   h+="</tbody></table><p class='bt-scale'>Budget axis: log scale "+fmtCompact(lo)+" – "+fmtCompact(hi)+" (this table) · <span class='bt-band-key'></span> middle 50% · <span class='bt-med-key'></span> median</p>";
   return h+"</details>";
@@ -214,6 +214,14 @@ function renderBenchmarks(){
   const provTop=Object.keys(provCount).sort((x,y)=>provCount[y]-provCount[x]).slice(0,12);
   const prov=provTop.map(pn=>({lab:pn,fn:p=>p.pn===pn}));
   el.innerHTML=
+    "<div class='bt-banner'><h2>Reference values, not a score</h2>"+
+      "<p>These are <b>typical values for comparable real programmes</b> — median budget, the middle-50% range, median duration and the share reporting results — grouped into <b>peer sets</b>. They are a <b>design reference</b> for realistic scope. They are <b>not a quality score and rank nothing</b>: no programme or donor is rated &ldquo;better&rdquo;.</p>"+
+      "<ul class='bt-how'>"+
+        "<li><b>Read a row:</b> the <b>median</b> is the typical programme; the <b>bar</b> is the middle 50% (p25–p75) on a shared log scale — so you see the spread, not just a point.</li>"+
+        "<li><b>Compare like with like:</b> tables A–E are <b>different peer groupings</b> — use the one closest to your design. For your exact case (country + sector + funder) use <b>Plan a programme</b>, which builds the cohort first, then shows the median.</li>"+
+        "<li><b>Confidence:</b> <span class='bt-thin'>⚠</span> flags groups under 8 programmes (indicative only); the <b>In IATI</b> column is the larger recent universe each sample is drawn from. Missing budgets are left blank, never counted as $0.</li>"+
+        "<li><b>Why it matters for design:</b> anchoring budget, duration and a realistic results-reporting expectation on comparable programmes keeps a new design grounded, not aspirational.</li>"+
+      "</ul></div>"+
     btable("A \u00b7 Bilateral programmes by sector","donor type = Bilateral — your headline benchmark","Median budget, duration and reporting rate for programmes funded by a single government (bilateral) — the closest comparator for a typical donor grant. Start your scope from the median budget; the bar shows it against the other sectors.",
       bilat,"Sector",true,false)+
     btable("B \u00b7 All programmes by sector","any donor type","The same metrics with every donor type pooled. Usually larger than A because it includes multilateral facilities, so read it for the full per-sector spread rather than a single grant.",
@@ -239,6 +247,29 @@ function exportOutcomes(){ const rows=sortRows(filterOutcomes(),OS.sort,OS.dir);
   const L=[head.map(cc).join(",")];
   rows.forEach(o=>L.push([i18n(o.n),o.s,o.sn,o.t,i18n(o.i),o.m,o.bl,o.tg,o.ac,(o._ach==null?"":o._ach.toFixed(3))].map(cc).join(",")));
   dl("benchmark_outcomes_filtered.csv",L.join("\n")); }
+function exportDictionary(){
+  const rows=[["Field","Meaning","Provenance"],
+    ["Programme","Activity title (English where translated, original otherwise)","REPORTED"],
+    ["Description","One-line core-activities summary or the IATI description","REPORTED/DERIVED"],
+    ["Country / ISO","Primary recipient country (highest reported share) and ISO2","REPORTED"],
+    ["Region","World Bank region of the recipient country","DERIVED"],
+    ["Donor type","Bilateral, Multilateral, NGO, Foundation or Private sector","DERIVED from reporting-org type"],
+    ["Providing country","Funder country for bilaterals, inferred from the org's ISO prefix; blank if undeterminable","INFERRED"],
+    ["Funder / Reporting org","Funding organisation and the IATI reporting organisation","REPORTED"],
+    ["Stream","Thematic stream grouping of the DAC sector","DERIVED"],
+    ["DAC code / Sector","5-digit DAC purpose code and its name","REPORTED"],
+    ["Status","IATI activity status (Pipeline/Implementation/Finalisation/Closed...)","REPORTED"],
+    ["Start / End","Reported activity dates","REPORTED"],
+    ["Duration (mo)","Months between start and end; blank if a date is missing","DERIVED"],
+    ["Currency / Amount / Basis","Reported amount, its currency, and what it represents (budget/commitment/disbursement/expenditure)","REPORTED"],
+    ["USD approx","Amount in USD via indicative fixed FX; real mode deflates to constant-2024 USD (US CPI). Blank = no currency/amount (GAP)","DERIVED"],
+    ["Reach / Reach basis","Reported beneficiary/indicator count and its label; non-comparable, not divided into a unit cost","REPORTED"],
+    ["Reports results","Whether the activity publishes any IATI result","REPORTED"],
+    ["Baseline / Target / Actual","Indicator values (Reported outcomes export)","REPORTED"],
+    ["Achieved (act/tgt)","Actual divided by target, per indicator; never aggregated into a benchmark","DERIVED"],
+    ["IATI id","Source IATI activity identifier","REPORTED"]];
+  dl("benchmark_data_dictionary.csv",rows.map(r=>r.map(cc).join(",")).join("\n"));
+}
 
 function buildFX(){ const wrap=document.getElementById("fx"); if(!wrap) return; const keys=Object.keys(RATES);
   wrap.innerHTML=keys.map(k=>"<label class='fxrow'><span>"+k+"</span><input type='number' step='0.0001' data-cur='"+k+"' value='"+RATES[k]+"'></label>").join("");
@@ -987,6 +1018,7 @@ function init(){ try {
   on("o-prev","click",()=>{if(OS.page>1){OS.page--;renderOutcomes();}});
   on("o-next","click",()=>{OS.page++;renderOutcomes();});
   on("o-export","click",exportOutcomes);
+  on("dl-dict","click",exportDictionary);
   on("cy-pick","change",e=>{CY.country=e.target.value;renderCountry();});
   on("ch-sector","change",e=>{CS.sc=e.target.value;renderCharts();syncURL();});
   on("ch-region","change",e=>{CS.rg=e.target.value;renderCharts();syncURL();});

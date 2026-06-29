@@ -16,7 +16,7 @@
 <meta name="twitter:description" content="Real comparable aid programmes from IATI: median budgets, durations and reporting rates by sector, donor type and region.">
 <meta name="twitter:image" content="https://developmentihpc-cpu.github.io/Benchmark-database/assets/og.svg">
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/styles.css?v=2">
+<link rel="stylesheet" href="css/styles.css?v=3">
 </head>
 <body><div class="app">
 <noscript><div style="max-width:560px;margin:14vh auto;padding:28px;text-align:center;font-family:Georgia,serif;color:#33424f">
@@ -85,7 +85,7 @@
  </section>
 
  <section id="view-benchmarks" class="view">
-  <header class="topbar"><div class="tb-title"><h1>Benchmarks</h1><p>Median budget, duration and reporting rate by sector, donor type and region — computed live over the representative embedded sample. Switch nominal ↔ real (2024) USD in the sidebar.</p></div></header>
+  <header class="topbar"><div class="tb-title"><h1>Benchmarks</h1><p><b>Typical values for comparable real programmes — a design reference, not a quality score or ranking.</b> Median budget, duration and results-reporting rate by peer group (sector, donor type, region, funder), computed live over the embedded sample. Switch nominal ↔ real (2024) USD in the sidebar.</p></div></header>
   <div id="bench" class="bench"></div>
  </section>
 
@@ -102,7 +102,7 @@
  </section>
 
  <section id="view-plan" class="view">
-  <header class="topbar"><div class="tb-title"><h1>Plan a programme</h1><p>Pick a need, get a benchmark from comparable real programmes, then adjust the plan to fit your budget.</p></div></header>
+  <header class="topbar"><div class="tb-title"><h1>Plan a programme</h1><p><b>Choose your comparator group first</b> — country, sector and funder — then see the typical budget, duration and reach of those comparable real programmes, and place your draft against them. The cohort is shown before any number, and flagged when it is thin or dominated by one funder.</p></div></header>
   <div class="plan">
    <div class="pcard">
     <div class="pcard-h"><span class="pstep">1</span><h2>Define the need</h2></div>
@@ -149,7 +149,18 @@
   <header class="topbar"><div class="tb-title"><h1>#read_me</h1><p>Method, provenance and caveats. Source: IATI Standard via the Code for IATI datastore · developing countries · pulled 2026-06-02.</p></div></header>
   <div class="mcols">
    <h2>What this is</h2>
-   <p>A reference set of real comparable programmes and live benchmarks to inform programme <b>design</b> — realistic scope, budget, duration and targets. It is a design reference, not an M&amp;E tracking system.</p>
+   <p>A reference set of real comparable programmes and live benchmarks to inform programme <b>design</b> — realistic scope, budget, duration and targets. It is a design reference, not an M&amp;E tracking system, and <b>not a scoring or ranking tool</b>: nothing here rates an organisation or programme as &ldquo;better&rdquo;.</p>
+   <h2>What each view answers</h2>
+   <p class="muted">The tabs map to the questions asked when designing a programme — discovery first, comparison second, method always visible.</p>
+   <ul class="cav">
+    <li><b>Programmes</b> — <i>what comparable work exists?</i> The filterable evidence base, by country, sector, donor and status.</li>
+    <li><b>Benchmarks</b> — <i>what is typical?</i> Median budget, duration and results-reporting rate by peer group. A reference, not a ranking.</li>
+    <li><b>Charts</b> — <i>what is the shape of the sample?</i> Budget distribution, time trend, scale&nbsp;vs&nbsp;duration, regional split.</li>
+    <li><b>Country profiles</b> — <i>who funds what, where?</i> Spend by sector and funder, indicators per sector, top providing countries.</li>
+    <li><b>Plan a programme</b> — <i>is my design realistic?</i> Build a like-with-like cohort, then place your budget, duration and reach against it, with a reality-check on reported actuals.</li>
+    <li><b>Reported outcomes</b> — <i>how reliable is the results evidence?</i> Indicator baseline&rarr;target&rarr;actual, achieved shown per row and never aggregated.</li>
+    <li><b>#read_me</b> — <i>how was every figure derived?</i> Provenance, formulas, caveats and coverage.</li>
+   </ul>
    <h2>Scope</h2>
    <p>All <b>developing countries</b> — World Bank non&ndash;high-income economies (high-income and aggregates excluded); <span id="m-ncountry2">124</span> countries appear here. A programme is kept if it <b>started on or after 2021-06-02</b> (the last 5 years) <b>or</b> is <b>currently ongoing/planned</b> (IATI Implementation or Pipeline), so recently-closed programmes are included. Each programme's country is its primary recipient (highest reported share); multi-country programmes are marked &ldquo;+&rdquo;.</p>
    <h2>Provenance — every figure is one of</h2>
@@ -176,6 +187,17 @@
    <h2>Sample calibration — how representative is this sample?</h2>
    <p class="muted">For each sector: how many programmes are in this embedded sample, the recent IATI universe it is drawn from (live from the official IATI Datastore), the resulting coverage, and — for outside context — recent ODA to that sector from the <b>OECD CRS</b> (latest year, all DAC donors → developing countries). Coverage well under 100% is expected — this is a representative sample, not a census. <b>The OECD column is a different measure</b> (annual ODA US$, a broader all-DAC-donor universe than IATI), shown for scale, not a coverage denominator. Refresh both with <code>datastore_totals.py</code> (free IATI key) and <code>crs_calibration.py</code> (no key).</p>
    <table class="mtable"><thead><tr><th>Sector</th><th>Stream</th><th class="c-num">In sample</th><th class="c-num">Recent IATI</th><th class="c-num">Coverage</th><th class="c-num">OECD CRS ODA</th></tr></thead><tbody id="iati-universe"></tbody></table>
+   <h2>Exports &amp; data dictionary</h2>
+   <p>Every grid exports to CSV — <b>Programmes</b> and <b>Reported outcomes</b> (filtered to your current view) and the <b>plan basket</b>. The field reference: <button id="dl-dict" class="btn ghost" type="button">⤓ Data dictionary (CSV)</button></p>
+   <table class="mtable dict"><thead><tr><th>Field</th><th>What it means</th></tr></thead><tbody>
+    <tr><td>USD approx</td><td>Reported amount converted to USD via the indicative fixed FX below; in <i>real</i> mode, deflated to constant-2024 USD by start-year (US CPI). <b>Derived</b>. Blank when no currency/amount (GAP).</td></tr>
+    <tr><td>Basis</td><td>What the amount represents — budget, commitment, disbursement or expenditure (the last derived from IATI transactions where no budget is reported).</td></tr>
+    <tr><td>Duration (mo)</td><td>Months between reported start and end dates. <b>Derived</b>; blank if either date is missing.</td></tr>
+    <tr><td>Providing country</td><td>For bilaterals, the funder country <b>inferred</b> from the funding/reporting org's ISO registration prefix; blank when not determinable.</td></tr>
+    <tr><td>Reports results</td><td>Whether the activity publishes any IATI result; indicator-level rows appear in Reported outcomes where available.</td></tr>
+    <tr><td>Achieved (act/tgt)</td><td>Indicator actual &divide; target. <b>Derived</b>, shown per row only — never aggregated into a benchmark.</td></tr>
+    <tr><td>Reach</td><td>Reported beneficiary/indicator count, kept with its label. Non-comparable across activities — deliberately not divided into a cost-per-beneficiary.</td></tr>
+   </tbody></table>
    <h2>Refresh &amp; extend</h2>
    <p>The dataset is embedded directly in <code>js/data.js</code> — there is no server and no build step; this page is static. To regenerate or grow it: <b>iati_ingest.py</b> holds the shared ingestion core (developing-country + region reference, DAC-sector and stream classification). The per-sector samples are pulled from the official <b>IATI Datastore</b> (free API key) and drawn <b>publisher-capped</b> so no single donor dominates a sector. <b>add_sector.py</b> adds a DAC sector, <b>add_uae.py</b> a publisher; <b>enrich_llm.py</b> adds optional English summaries. Refresh the calibration columns below with <b>datastore_totals.py</b> (Recent IATI; needs the key) and <b>crs_calibration.py</b> (OECD CRS; no key). Set the key as an environment variable — never commit it.</p>
   </div>
@@ -187,7 +209,7 @@
 <div id="pl-brief" class="pl-brief" aria-hidden="true"></div>
 <script src="js/lib.js"></script>
 <script src="js/i18n.js"></script>
-<script src="js/geo.js?v=2"></script>
+<script src="js/geo.js?v=3"></script>
 <script src="js/data.js"></script>
-<script src="js/app.js?v=2"></script>
+<script src="js/app.js?v=3"></script>
 </body></html>
