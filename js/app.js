@@ -179,30 +179,27 @@ function renderOutcomes(){
 
 function groupStats(fn){ const r=PROGRAMS.filter(fn); const b=statsOf(r,"_usd"); const wr=r.filter(x=>x.re).length; return {n:r.length,mb:b.med,b25:b.p25,b75:b.p75,md:median(r.map(x=>x._dur)),
   wr:wr, pr:r.length?wr/r.length:null}; }
-function btable(title,sub,desc,specs,labelHdr,showTotal,showDot){
+const BM={view:"bilat"};
+/* One benchmark grouping rendered as a responsive card grid (one card per group:
+ * median budget + middle-50% bar on a shared log scale, duration, % results, n). */
+function bmGrid(specs,showTotal,showDot){
   const stats=specs.map(s=>{const g=groupStats(s.fn); return {lab:s.lab,total:s.total,n:g.n,mb:g.mb,b25:g.b25,b75:g.b75,md:g.md,pr:g.pr,wr:g.wr};});
   const vals=[]; stats.forEach(s=>[s.b25,s.mb,s.b75].forEach(v=>{ if(typeof v==="number"&&v>0) vals.push(v); }));
   const lo=vals.length?Math.min(...vals):1, hi=vals.length?Math.max(...vals):10;
-  const la=Math.log(Math.max(1,lo)), lb=Math.log(Math.max(2,hi)), span=(lb-la)||1;
+  const la=Math.log(Math.max(1,lo)),lb=Math.log(Math.max(2,hi)),span=(lb-la)||1;
   const pos=v=>(v==null||v<=0)?null:Math.max(0,Math.min(100,100*(Math.log(Math.max(1,v))-la)/span));
-  let h="<details class='btable' open><summary class='bt-cap'><span>"+esc(title)+"</span><em>"+esc(sub)+"</em></summary>"+
-   (desc?"<p class='bt-desc'>"+esc(desc)+"</p>":"")+
-   "<table class='grid'><thead><tr><th>"+esc(labelHdr)+"</th><th class='c-num'>n</th>"+
-   "<th>Budget &asymp;USD <span class='bt-h-sub'>median + middle 50%</span></th><th class='c-num'>Median dur (mo)</th><th class='c-num'>% results</th>"+
-   (showTotal?"<th class='c-num'>In IATI</th>":"")+"</tr></thead><tbody>";
-  stats.forEach(s=>{ const a=pos(s.b25),c=pos(s.b75),m=pos(s.mb);
-   const cell=(m==null)?"<span class='muted'>—</span>":
-     "<span class='bstrip'>"+((a!=null&&c!=null)?"<span class='bstrip-band' style='left:"+Math.min(a,c)+"%;width:"+Math.max(2,Math.abs(c-a))+"%'></span>":"")+"<span class='bstrip-med' style='left:"+m+"%'></span></span>"+
-     "<span class='bv' title='median "+esc(fmtUSD(s.mb))+(s.b25!=null?" · middle 50% "+esc(fmtUSD(s.b25))+"–"+esc(fmtUSD(s.b75)):"")+"'>"+fmtCompact(s.mb)+"</span>";
-   const thin=(s.n>0&&s.n<8);
-   h+="<tr><td class='c-name b-lab'>"+(showDot?"<i class='cdot' style='background:"+(DONOR_COLORS[s.lab]||"#8A98A3")+"'></i>":"")+esc(s.lab)+"</td>"+
-     "<td class='c-num'>"+s.n+(thin?" <span class='bt-thin' title='Fewer than 8 comparable programmes — treat this median as indicative'>⚠</span>":"")+"</td>"+
-     "<td class='bcell'><div class='bcell-in'>"+cell+"</div></td>"+
-     "<td class='c-num'>"+(s.md==null?"—":s.md)+"</td>"+
-     "<td class='c-num'>"+fmtPct(s.pr)+(s.n?"<span class='bt-denom'>"+fmtNum(s.wr)+" of "+fmtNum(s.n)+"</span>":"")+"</td>"+
-     (showTotal?"<td class='c-num dim'>"+fmtNum(s.total)+"</td>":"")+"</tr>"; });
-  h+="</tbody></table><p class='bt-scale'>Budget axis: log scale "+fmtCompact(lo)+" – "+fmtCompact(hi)+" (this table) · <span class='bt-band-key'></span> middle 50% · <span class='bt-med-key'></span> median</p>";
-  return h+"</details>";
+  const cards=stats.map(s=>{ const a=pos(s.b25),c=pos(s.b75),m=pos(s.mb); const thin=(s.n>0&&s.n<8);
+    const bar=(m==null)?"<div class='bm-bar off'></div>":
+      "<div class='bm-bar'>"+((a!=null&&c!=null)?"<span class='bm-band' style='left:"+Math.min(a,c)+"%;width:"+Math.max(2,Math.abs(c-a))+"%'></span>":"")+"<span class='bm-med' style='left:"+m+"%'></span></div>";
+    return "<div class='bm-card"+(s.n===0?" dim-card":"")+"'>"+
+      "<div class='bm-card-h'>"+(showDot?"<i class='cdot' style='background:"+(DONOR_COLORS[s.lab]||"#8A98A3")+"'></i>":"")+"<span class='bm-lab' title='"+eatt(s.lab)+"'>"+esc(s.lab)+"</span><span class='bm-n'>n="+s.n+(thin?" <span class='bt-thin' title='Fewer than 8 comparable programmes — indicative'>⚠</span>":"")+"</span></div>"+
+      "<div class='bm-v'>"+(s.mb==null?"<span class='muted'>—</span>":fmtCompact(s.mb))+"</div>"+
+      "<div class='bm-sub'>"+(s.b25!=null?"mid 50% "+fmtCompact(s.b25)+"–"+fmtCompact(s.b75):"&nbsp;")+"</div>"+
+      bar+
+      "<div class='bm-foot'><span>"+(s.md==null?"—":s.md+" mo")+"</span><span>"+fmtPct(s.pr)+" results"+(s.n?" <span class='bm-den'>"+fmtNum(s.wr)+"/"+fmtNum(s.n)+"</span>":"")+"</span>"+(showTotal&&s.total!=null?"<span>"+fmtNum(s.total)+" in IATI</span>":"")+"</div>"+
+    "</div>";
+  }).join("");
+  return "<div class='bm-grid'>"+cards+"</div><p class='bt-scale'>Budget bar: shared log scale "+fmtCompact(lo)+" – "+fmtCompact(hi)+" across this view · <span class='bt-band-key'></span> middle 50% · <span class='bt-med-key'></span> median</p>";
 }
 function renderBenchmarks(){
   const el=document.getElementById("bench"); if(!el) return;
@@ -213,26 +210,27 @@ function renderBenchmarks(){
   const provCount={}; PROGRAMS.forEach(p=>{ if(p.pcc) provCount[p.pn]=(provCount[p.pn]||0)+1; });
   const provTop=Object.keys(provCount).sort((x,y)=>provCount[y]-provCount[x]).slice(0,12);
   const prov=provTop.map(pn=>({lab:pn,fn:p=>p.pn===pn}));
+  const VIEWS=[
+    {k:"bilat",label:"Bilateral · by sector",specs:bilat,showTotal:true,showDot:false,desc:"Programmes funded by a single government (bilateral) — the closest comparator for a typical donor grant. Start your scope from the median budget."},
+    {k:"all",label:"All · by sector",specs:all,showTotal:true,showDot:false,desc:"Every donor type pooled — usually larger than bilateral because it includes multilateral facilities. Read it for the full per-sector spread."},
+    {k:"donor",label:"By donor type",specs:don,showTotal:false,showDot:true,desc:"How typical scale and reporting differ by funder type — multilaterals generally run larger, longer programmes than NGOs or foundations."},
+    {k:"region",label:"By region",specs:reg,showTotal:false,showDot:false,desc:"Typical scale and reporting by world region, across all sectors and donors."},
+    {k:"prov",label:"By providing country",specs:prov,showTotal:false,showDot:false,desc:"Indicative typical programme size per funding government (top 12 by count). Provider country is inferred from the funder — treat as approximate."}
+  ];
+  const active=VIEWS.find(v=>v.k===BM.view)||VIEWS[0];
   el.innerHTML=
     "<div class='bt-banner'><h2>Reference values, not a score</h2>"+
-      "<p>These are <b>typical values for comparable real programmes</b> — median budget, the middle-50% range, median duration and the share reporting results — grouped into <b>peer sets</b>. They are a <b>design reference</b> for realistic scope. They are <b>not a quality score and rank nothing</b>: no programme or donor is rated &ldquo;better&rdquo;.</p>"+
+      "<p>These are <b>typical values for comparable real programmes</b> — median budget, the middle-50% range, median duration and the share reporting results — grouped into <b>peer sets</b>. They are a <b>design reference</b> for realistic scope, <b>not a quality score</b> and rank nothing.</p>"+
       "<ul class='bt-how'>"+
-        "<li><b>Read a row:</b> the <b>median</b> is the typical programme; the <b>bar</b> is the middle 50% (p25–p75) on a shared log scale — so you see the spread, not just a point.</li>"+
-        "<li><b>Compare like with like:</b> tables A–E are <b>different peer groupings</b> — use the one closest to your design. For your exact case (country + sector + funder) use <b>Plan a programme</b>, which builds the cohort first, then shows the median.</li>"+
-        "<li><b>Confidence:</b> <span class='bt-thin'>⚠</span> flags groups under 8 programmes (indicative only); the <b>In IATI</b> column is the larger recent universe each sample is drawn from. Missing budgets are left blank, never counted as $0.</li>"+
-        "<li><b>Why it matters for design:</b> anchoring budget, duration and a realistic results-reporting expectation on comparable programmes keeps a new design grounded, not aspirational.</li>"+
+        "<li><b>Read a card:</b> the big number is the <b>median</b> (the typical programme); the <b>bar</b> is the middle 50% (p25–p75) on a shared log scale, so you see the spread.</li>"+
+        "<li><b>Pick a grouping:</b> the tabs below are <b>different peer sets</b> — use the one closest to your design. For your exact case (country + sector + funder) use <b>Plan a programme</b>.</li>"+
+        "<li><b>Confidence:</b> <span class='bt-thin'>⚠</span> flags groups under 8 programmes (indicative); <b>in IATI</b> is the larger recent universe each sample is drawn from. Missing budgets are blank, never $0.</li>"+
       "</ul></div>"+
-    btable("A \u00b7 Bilateral programmes by sector","donor type = Bilateral — your headline benchmark","Median budget, duration and reporting rate for programmes funded by a single government (bilateral) — the closest comparator for a typical donor grant. Start your scope from the median budget; the bar shows it against the other sectors.",
-      bilat,"Sector",true,false)+
-    btable("B \u00b7 All programmes by sector","any donor type","The same metrics with every donor type pooled. Usually larger than A because it includes multilateral facilities, so read it for the full per-sector spread rather than a single grant.",
-      all,"Sector",true,false)+
-    btable("C \u00b7 By donor type","across all sectors & regions","How typical scale and reporting differ by funder type, across all sectors and regions — multilaterals generally run larger, longer programmes than NGOs or foundations.",
-      don,"Donor type",false,true)+
-    btable("D \u00b7 By region","across all sectors & donors","Typical scale and reporting by world region, across all sectors and donors — context for where a programme sits geographically.",
-      reg,"Region",false,false)+
-    btable("E \u00b7 By providing country","inferred funder country \u2014 bilateral & co-funded; top 12 by count","Indicative typical programme size per funding government, for bilateral and co-funded programmes (top 12 by count). Provider country is inferred from the funder/reporter, so treat as approximate.",
-      prov,"Providing country",false,false)+
-    "<p class='bnote'>Computed live over the "+nf.format(PROGRAMS.length)+" embedded programmes (a global sample; the recent IATI universe per sector is larger — see the 'In IATI' column and #read_me). Each budget strip shows the middle 50% of programmes (p25–p75) with the median marked, on a shared log scale per table. <b>Cost-per-beneficiary and aggregate achievement are intentionally absent</b> — IATI reach and target/actual fields are non-comparable.</p>";
+    "<div class='bm-tabs' role='tablist'>"+VIEWS.map(v=>"<button class='bm-tab"+(v.k===active.k?" on":"")+"' data-view='"+v.k+"'>"+esc(v.label)+"</button>").join("")+"</div>"+
+    "<p class='bm-desc'>"+esc(active.desc)+"</p>"+
+    bmGrid(active.specs,active.showTotal,active.showDot)+
+    "<p class='bnote'>Computed live over the "+nf.format(PROGRAMS.length)+" embedded programmes (a global sample; the recent IATI universe per sector is larger — see &lsquo;in IATI&rsquo; and #read_me). <b>Cost-per-beneficiary and aggregate achievement are intentionally absent</b> — IATI reach and target/actual fields are non-comparable.</p>";
+  el.querySelectorAll(".bm-tab").forEach(b=>b.addEventListener("click",()=>{ BM.view=b.getAttribute("data-view"); renderBenchmarks(); }));
 }
 
 function dl(name,text){ const b=new Blob([text],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(b),a=document.createElement("a"); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1500); }

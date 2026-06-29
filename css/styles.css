@@ -212,6 +212,27 @@ summary.bt-cap:hover span{color:var(--accent-ink)}
 .bt-how li{margin:4px 0}
 .bt-how b{color:var(--text)}
 .bt-denom{display:block;font-size:10px;color:var(--faint);font-weight:400}
+/* benchmarks: type selector + card grid */
+.bm-tabs{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 12px}
+.bm-tab{font:inherit;font-size:12px;font-weight:600;padding:7px 13px;border-radius:9px;border:1px solid var(--line2);background:var(--panel);color:var(--text2);cursor:pointer}
+.bm-tab:hover{border-color:var(--accent);color:var(--accent-ink)}
+.bm-tab.on{background:color-mix(in srgb,var(--accent) 14%,var(--panel));color:var(--accent-ink);border-color:color-mix(in srgb,var(--accent) 40%,var(--line2))}
+.bm-desc{font-size:12.5px;color:var(--text2);margin:0 0 14px;max-width:78ch;line-height:1.5}
+.bm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.bm-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:13px 15px;box-shadow:var(--shadow)}
+.bm-card.dim-card{opacity:.5}
+.bm-card-h{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.bm-card-h .cdot{flex:none}
+.bm-lab{font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.bm-n{font-size:10.5px;color:var(--text2);font-variant-numeric:tabular-nums;flex:none}
+.bm-v{font-family:var(--serif);font-weight:600;font-size:22px;line-height:1}
+.bm-sub{font-size:10.5px;color:var(--text2);margin-top:3px;min-height:13px}
+.bm-bar{position:relative;height:8px;border-radius:5px;background:var(--bar-b);margin:10px 0 9px}
+.bm-bar.off{background:transparent}
+.bm-band{position:absolute;top:0;bottom:0;border-radius:5px;background:var(--bar-a)}
+.bm-med{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--accent)}
+.bm-foot{display:flex;flex-wrap:wrap;gap:3px 10px;font-size:11px;color:var(--text2);font-variant-numeric:tabular-nums;border-top:1px solid var(--line);padding-top:8px}
+.bm-den{color:var(--faint)}
 .plan{display:flex;flex-direction:column;gap:18px;max-width:1120px}
 .pcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px 20px}
 .pcard-h{display:flex;align-items:center;gap:10px;margin-bottom:14px}
