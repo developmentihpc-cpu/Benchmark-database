@@ -238,32 +238,50 @@ function renderBenchmarks(){
 /* ---------- Sectors (visual landing — image cards per focus area) ---------- */
 const SECTOR_CARDS=[
   {key:"education",title:"Education",color:"#5b5fe0",themes:["education"],
-   desc:"Educational infrastructure, access to digital learning, and literacy — benchmarked against comparable real programmes.",
+   desc:"Educational infrastructure, access to digital learning, and literacy.",
    icon:"<svg viewBox='0 0 24 24'><path d='M12 4 2 9l10 5 8-4'/><path d='M6 11.5V16c0 1.1 2.7 2.5 6 2.5s6-1.4 6-2.5v-4.5'/><path d='M20 9v5'/></svg>"},
-  {key:"agriculture",title:"Agriculture & Rural Development",color:"#1f9d72",themes:["agriculture","environment"],
-   desc:"Crop and livelihood programmes, irrigation, value chains, climate and rural development.",
-   icon:"<svg viewBox='0 0 24 24'><path d='M12 21v-8'/><path d='M12 13c-4 0-6-2.2-6-6.5 4.2 0 6 2.2 6 6.5Z'/><path d='M12 13c4 0 6-2.2 6-6.5-4.2 0-6 2.2-6 6.5Z'/></svg>"},
-  {key:"health",title:"Health & Nutrition",color:"#d65745",themes:["health","nutrition","wash","humanitarian"],
-   desc:"Primary health care, nutrition, WASH and humanitarian response — facility readiness, essential services and community reach.",
+  {key:"health",title:"Health & Nutrition",color:"#d65745",themes:["health","nutrition"],
+   desc:"Primary health care and nutrition — facility readiness, essential services and community reach.",
    icon:"<svg viewBox='0 0 24 24'><path d='M12 21s-7-4.6-7-10.2A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.8C19 16.4 12 21 12 21Z'/></svg>"},
-  {key:"infrastructure",title:"Infrastructure & Energy",color:"#2f78c4",themes:["energy","infrastructure","economic"],
-   desc:"Clean energy and electrification, transport, private sector and major public infrastructure.",
+  {key:"wash",title:"Water & Sanitation",color:"#2aa3c4",themes:["wash"],
+   desc:"Water supply, sanitation and hygiene — sustained services, not just infrastructure.",
+   icon:"<svg viewBox='0 0 24 24'><path d='M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11Z'/></svg>"},
+  {key:"agriculture",title:"Agriculture & Rural Development",color:"#1f9d72",themes:["agriculture"],
+   desc:"Crop and livelihood programmes, irrigation, value chains and rural development.",
+   icon:"<svg viewBox='0 0 24 24'><path d='M12 21v-8'/><path d='M12 13c-4 0-6-2.2-6-6.5 4.2 0 6 2.2 6 6.5Z'/><path d='M12 13c4 0 6-2.2 6-6.5-4.2 0-6 2.2-6 6.5Z'/></svg>"},
+  {key:"environment",title:"Environment & Climate",color:"#2f9e44",themes:["environment"],
+   desc:"Climate adaptation and mitigation, biodiversity, and natural-resource management.",
+   icon:"<svg viewBox='0 0 24 24'><path d='M5 19c0-8 6-13 14-13 0 8-5 14-14 13Z'/><path d='M5 19c2-4.5 5-7 9-8'/></svg>"},
+  {key:"infrastructure",title:"Infrastructure & Energy",color:"#2f78c4",themes:["energy","infrastructure"],
+   desc:"Clean energy and electrification, transport and major public infrastructure.",
    icon:"<svg viewBox='0 0 24 24'><path d='M13 2 4 14h6l-1 8 9-12h-6l1-8Z'/></svg>"},
-  {key:"governance",title:"Governance & Civil Society",color:"#566074",themes:["governance","social","multisector"],
-   desc:"Public financial management, civil society, social protection and democratic participation.",
-   icon:"<svg viewBox='0 0 24 24'><path d='M3 9 12 3l9 6'/><path d='M5 9v9M9 9v9M15 9v9M19 9v9'/><path d='M3 18.5h18'/></svg>"}
+  {key:"economic",title:"Private Sector & Economy",color:"#e08a2c",themes:["economic"],
+   desc:"Private sector development, finance, trade, industry and tourism.",
+   icon:"<svg viewBox='0 0 24 24'><rect x='3' y='7' width='18' height='13' rx='2'/><path d='M8 7V5.5A2.5 2.5 0 0 1 10.5 3h3A2.5 2.5 0 0 1 16 5.5V7'/><path d='M3 12.5h18'/></svg>"},
+  {key:"governance",title:"Governance & Civil Society",color:"#566074",themes:["governance","multisector"],
+   desc:"Public financial management, civil society and democratic participation.",
+   icon:"<svg viewBox='0 0 24 24'><path d='M3 9 12 3l9 6'/><path d='M5 9v9M9 9v9M15 9v9M19 9v9'/><path d='M3 18.5h18'/></svg>"},
+  {key:"social",title:"Social Protection",color:"#9c4dcc",themes:["social"],
+   desc:"Cash transfers, social safety nets and social services.",
+   icon:"<svg viewBox='0 0 24 24'><circle cx='9' cy='8' r='3'/><path d='M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6'/><path d='M16 6.2a3 3 0 0 1 0 5.6'/><path d='M21 20c0-2.5-1.5-4.6-3.7-5.5'/></svg>"},
+  {key:"humanitarian",title:"Humanitarian Response",color:"#c0392b",themes:["humanitarian"],
+   desc:"Emergency response, reconstruction and disaster risk reduction.",
+   icon:"<svg viewBox='0 0 24 24'><path d='M12 4 3 19h18L12 4Z'/><path d='M12 10v6'/></svg>"}
 ];
 function renderSectors(){
   const el=document.getElementById("sectors-grid"); if(!el) return;
   el.innerHTML=SECTOR_CARDS.map(s=>{
     const n=PROGRAMS.filter(p=>p.sc&&typeof guideTheme==="function"&&s.themes.includes(guideTheme(p.sc))).length;
     return "<div class='sec-card'>"+
-      "<div class='sec-img'><img src='assets/sectors/"+s.key+".jpg' alt='"+eatt(s.title)+"' loading='lazy'>"+
+      "<div class='sec-img' style='--c:"+s.color+"'><img src='assets/sectors/"+s.key+".jpg' alt='"+eatt(s.title)+"' loading='lazy'>"+
+        "<span class='sec-ghost'>"+s.icon+"</span>"+
         "<span class='sec-icon' style='--c:"+s.color+"'>"+s.icon+"</span></div>"+
       "<div class='sec-body'><h3>"+esc(s.title)+"</h3><p>"+esc(s.desc)+"</p>"+
         "<button class='sec-btn' data-key='"+s.key+"'>View Benchmarks <span class='sec-n'>"+fmtNum(n)+"</span></button></div>"+
     "</div>";
   }).join("");
+  // images that 404 (placeholder sectors with no photo yet) fall back to a gradient + icon
+  el.querySelectorAll(".sec-img img").forEach(img=>img.addEventListener("error",function(){ const w=this.closest(".sec-img"); if(w)w.classList.add("noimg"); this.remove(); }));
   el.querySelectorAll(".sec-btn").forEach(b=>b.addEventListener("click",()=>{
     const s=SECTOR_CARDS.find(x=>x.key===b.getAttribute("data-key")); if(!s) return;
     Object.assign(PS,{q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",cl:s.themes,clLabel:s.title,page:1});
