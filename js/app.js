@@ -181,7 +181,12 @@ function renderOutcomes(){
 
 function groupStats(fn){ const r=PROGRAMS.filter(fn); const b=statsOf(r,"_usd"); const wr=r.filter(x=>x.re).length; return {n:r.length,mb:b.med,b25:b.p25,b75:b.p75,md:median(r.map(x=>x._dur)),
   wr:wr, pr:r.length?wr/r.length:null}; }
-const BM={view:"bilat"};
+const BM={view:"bilat",custom:[],adding:false};
+/* A user-defined peer set: a sector, optionally narrowed by region and/or donor type. */
+function bmCustomSpec(c){
+  const lab=c.sn+(c.rg?" · "+c.rg:"")+(c.d?" · "+c.d:"");
+  return {lab:lab,fn:p=>p.sn===c.sn&&(!c.rg||p.rg===c.rg)&&(!c.d||p.d===c.d)};
+}
 /* One benchmark grouping rendered as a responsive card grid (one card per group:
  * median budget + middle-50% bar on a shared log scale, duration, % results, n). */
 function bmGrid(specs,showTotal,showDot){
@@ -231,8 +236,61 @@ function renderBenchmarks(){
     "<div class='bm-tabs' role='tablist'>"+VIEWS.map(v=>"<button class='bm-tab"+(v.k===active.k?" on":"")+"' data-view='"+v.k+"'>"+esc(v.label)+"</button>").join("")+"</div>"+
     "<p class='bm-desc'>"+esc(active.desc)+"</p>"+
     bmGrid(active.specs,active.showTotal,active.showDot)+
+    bmCustomBlock()+
+    "<div class='bm-cta'><div><h3>Plan your programme</h3><p>Benchmarks describe the field. To check <b>your</b> design against the closest peer set — your country, sector and funder — open the planner.</p></div>"+
+      "<button class='btn' id='bm-go-plan'>Go to the planner →</button></div>"+
     "<p class='bnote'>Computed live over the "+nf.format(PROGRAMS.length)+" embedded programmes (a global sample; the recent IATI universe per sector is larger — see &lsquo;in IATI&rsquo; and #read_me). <b>Cost-per-beneficiary and aggregate achievement are intentionally absent</b> — IATI reach and target/actual fields are non-comparable.</p>";
   el.querySelectorAll(".bm-tab").forEach(b=>b.addEventListener("click",()=>{ BM.view=b.getAttribute("data-view"); renderBenchmarks(); }));
+  bmWireCustom(el);
+  const gp=el.querySelector("#bm-go-plan"); if(gp) gp.addEventListener("click",()=>{ showView("plan"); if(typeof renderPlanRec==="function") renderPlanRec(); if(typeof renderPlanCalc==="function") renderPlanCalc(); });
+}
+/* "Add custom peer set" — the dashed card from the design + any sets the user has defined.
+ * Custom cards share their own log scale (mirrors bmGrid) and carry a remove control. */
+function bmCustomBlock(){
+  return "<div class='bm-custom'><h3 class='bm-chead'>Your peer sets</h3>"+
+    "<p class='bm-cnote'>Define your own comparator by region and donor type — the same medians, computed live over the matching programmes.</p>"+
+    "<div class='bm-grid bm-cgrid'>"+bmCustomCards()+bmAddCard()+"</div></div>";
+}
+function bmCustomCards(){
+  if(!BM.custom.length) return "";
+  const specs=BM.custom.map(bmCustomSpec);
+  const stats=specs.map(s=>{const g=groupStats(s.fn); return {lab:s.lab,n:g.n,mb:g.mb,b25:g.b25,b75:g.b75,md:g.md,pr:g.pr,wr:g.wr};});
+  const vals=[]; stats.forEach(s=>[s.b25,s.mb,s.b75].forEach(v=>{ if(typeof v==="number"&&v>0) vals.push(v); }));
+  const la=Math.log(Math.max(1,vals.length?Math.min(...vals):1)),lb=Math.log(Math.max(2,vals.length?Math.max(...vals):10)),span=(lb-la)||1;
+  const pos=v=>(v==null||v<=0)?null:Math.max(0,Math.min(100,100*(Math.log(Math.max(1,v))-la)/span));
+  return stats.map((s,i)=>{ const a=pos(s.b25),c=pos(s.b75),m=pos(s.mb),thin=(s.n>0&&s.n<8);
+    const bar=(m==null)?"<div class='bm-bar off'></div>":
+      "<div class='bm-bar'>"+((a!=null&&c!=null)?"<span class='bm-band' style='left:"+Math.min(a,c)+"%;width:"+Math.max(2,Math.abs(c-a))+"%'></span>":"")+"<span class='bm-med' style='left:"+m+"%'></span></div>";
+    return "<div class='bm-card"+(s.n===0?" dim-card":"")+"'>"+
+      "<button class='bm-crm' data-i='"+i+"' title='Remove this peer set'>×</button>"+
+      "<div class='bm-card-h'><span class='bm-lab' title='"+eatt(s.lab)+"'>"+esc(s.lab)+"</span><span class='bm-n'>n="+s.n+(thin?" <span class='bt-thin' title='Fewer than 8 comparable programmes — indicative'>⚠</span>":"")+"</span></div>"+
+      "<div class='bm-v'>"+(s.mb==null?"<span class='muted'>—</span>":fmtCompact(s.mb))+"</div>"+
+      "<div class='bm-sub'>"+(s.b25!=null?"mid 50% "+fmtCompact(s.b25)+"–"+fmtCompact(s.b75):"&nbsp;")+"</div>"+
+      bar+
+      "<div class='bm-foot'><span>"+(s.md==null?"—":s.md+" mo")+"</span><span>"+fmtPct(s.pr)+" results"+(s.n?" <span class='bm-den'>"+fmtNum(s.wr)+"/"+fmtNum(s.n)+"</span>":"")+"</span></div>"+
+    "</div>";
+  }).join("");
+}
+function bmAddCard(){
+  if(BM.adding){
+    const opt=(arr,ph)=>"<option value=''>"+ph+"</option>"+arr.map(x=>"<option>"+esc(x)+"</option>").join("");
+    return "<div class='bm-card bm-add open'>"+
+      "<label class='bm-fl'>Sector<select id='bmc-sn'>"+opt(SECTORS,"Choose a sector…")+"</select></label>"+
+      "<label class='bm-fl'>Region<select id='bmc-rg'>"+opt(REGIONS,"Any region")+"</select></label>"+
+      "<label class='bm-fl'>Donor type<select id='bmc-d'>"+opt(DONORS,"Any donor type")+"</select></label>"+
+      "<div class='bm-fbtns'><button class='btn' id='bmc-add'>Add</button><button class='btn ghost' id='bmc-cancel'>Cancel</button></div></div>";
+  }
+  return "<button class='bm-card bm-add' id='bmc-open'><span class='bm-add-plus'>+</span><span class='bm-add-t'>Add custom peer set</span><span class='bm-add-s'>Define your own by region and donor</span></button>";
+}
+function bmWireCustom(el){
+  const open=el.querySelector("#bmc-open"); if(open) open.addEventListener("click",()=>{ BM.adding=true; renderBenchmarks(); });
+  const cancel=el.querySelector("#bmc-cancel"); if(cancel) cancel.addEventListener("click",()=>{ BM.adding=false; renderBenchmarks(); });
+  const add=el.querySelector("#bmc-add"); if(add) add.addEventListener("click",()=>{
+    const sn=el.querySelector("#bmc-sn").value; if(!sn){ el.querySelector("#bmc-sn").focus(); return; }
+    BM.custom.push({sn:sn,rg:el.querySelector("#bmc-rg").value,d:el.querySelector("#bmc-d").value});
+    BM.adding=false; renderBenchmarks();
+  });
+  el.querySelectorAll(".bm-crm").forEach(b=>b.addEventListener("click",()=>{ BM.custom.splice(+b.getAttribute("data-i"),1); renderBenchmarks(); }));
 }
 
 /* ---------- Sectors (visual landing — image cards per focus area) ---------- */
