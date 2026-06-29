@@ -181,7 +181,7 @@ function renderOutcomes(){
 
 function groupStats(fn){ const r=PROGRAMS.filter(fn); const b=statsOf(r,"_usd"); const wr=r.filter(x=>x.re).length; return {n:r.length,mb:b.med,b25:b.p25,b75:b.p75,md:median(r.map(x=>x._dur)),
   wr:wr, pr:r.length?wr/r.length:null}; }
-const BM={view:"bilat",custom:[],adding:false};
+const BM={view:"bilat",custom:[],adding:false,showAll:false};
 /* A user-defined peer set: a sector, optionally narrowed by region and/or donor type. */
 function bmCustomSpec(c){
   const lab=c.sn+(c.rg?" · "+c.rg:"")+(c.d?" · "+c.d:"");
@@ -190,7 +190,10 @@ function bmCustomSpec(c){
 /* One benchmark grouping rendered as a responsive card grid (one card per group:
  * median budget + middle-50% bar on a shared log scale, duration, % results, n). */
 function bmGrid(specs,showTotal,showDot){
-  const stats=specs.map(s=>{const g=groupStats(s.fn); return {lab:s.lab,total:s.total,n:g.n,mb:g.mb,b25:g.b25,b75:g.b75,md:g.md,pr:g.pr,wr:g.wr};});
+  let stats=specs.map(s=>{const g=groupStats(s.fn); return {lab:s.lab,total:s.total,n:g.n,mb:g.mb,b25:g.b25,b75:g.b75,md:g.md,pr:g.pr,wr:g.wr};});
+  const LIMIT=10, fullCount=stats.length, capped=fullCount>LIMIT;
+  // Show only the 10 most important (largest comparable sample) unless expanded.
+  if(capped){ stats=stats.slice().sort((a,b)=>(b.n-a.n)||((b.mb||0)-(a.mb||0))); if(!BM.showAll) stats=stats.slice(0,LIMIT); }
   const vals=[]; stats.forEach(s=>[s.b25,s.mb,s.b75].forEach(v=>{ if(typeof v==="number"&&v>0) vals.push(v); }));
   const lo=vals.length?Math.min(...vals):1, hi=vals.length?Math.max(...vals):10;
   const la=Math.log(Math.max(1,lo)),lb=Math.log(Math.max(2,hi)),span=(lb-la)||1;
@@ -206,7 +209,11 @@ function bmGrid(specs,showTotal,showDot){
       "<div class='bm-foot'><span>"+(s.md==null?"—":s.md+" mo")+"</span><span>"+fmtPct(s.pr)+" results"+(s.n?" <span class='bm-den'>"+fmtNum(s.wr)+"/"+fmtNum(s.n)+"</span>":"")+"</span>"+(showTotal&&s.total!=null?"<span>"+fmtNum(s.total)+" in IATI</span>":"")+"</div>"+
     "</div>";
   }).join("");
-  return "<div class='bm-grid'>"+cards+"</div><p class='bt-scale'>Budget bar: shared log scale "+fmtCompact(lo)+" – "+fmtCompact(hi)+" across this view · <span class='bt-band-key'></span> middle 50% · <span class='bt-med-key'></span> median</p>";
+  const cap=capped&&!BM.showAll ? " · showing the 10 largest peer groups (by sample size)" : "";
+  const more=capped ? "<div class='bm-morewrap'><button class='bm-more' data-bm-toggle='1'>"+(BM.showAll
+      ? "Show the 10 most important only"
+      : "Show all "+fullCount+" &middot; "+(fullCount-LIMIT)+" more hidden")+"</button></div>" : "";
+  return "<div class='bm-grid'>"+cards+"</div><p class='bt-scale'>Budget bar: shared log scale "+fmtCompact(lo)+" – "+fmtCompact(hi)+" across this view · <span class='bt-band-key'></span> middle 50% · <span class='bt-med-key'></span> median"+cap+"</p>"+more;
 }
 function renderBenchmarks(){
   const el=document.getElementById("bench"); if(!el) return;
@@ -240,7 +247,8 @@ function renderBenchmarks(){
     "<div class='bm-cta'><div><h3>Plan your programme</h3><p>Benchmarks describe the field. To check <b>your</b> design against the closest peer set — your country, sector and funder — open the planner.</p></div>"+
       "<button class='btn' id='bm-go-plan'>Go to the planner →</button></div>"+
     "<p class='bnote'>Computed live over the "+nf.format(PROGRAMS.length)+" embedded programmes (a global sample; the recent IATI universe per sector is larger — see &lsquo;in IATI&rsquo; and #read_me). <b>Cost-per-beneficiary and aggregate achievement are intentionally absent</b> — IATI reach and target/actual fields are non-comparable.</p>";
-  el.querySelectorAll(".bm-tab").forEach(b=>b.addEventListener("click",()=>{ BM.view=b.getAttribute("data-view"); renderBenchmarks(); }));
+  el.querySelectorAll(".bm-tab").forEach(b=>b.addEventListener("click",()=>{ BM.view=b.getAttribute("data-view"); BM.showAll=false; renderBenchmarks(); }));
+  const mt=el.querySelector("[data-bm-toggle]"); if(mt) mt.addEventListener("click",()=>{ BM.showAll=!BM.showAll; renderBenchmarks(); });
   bmWireCustom(el);
   const gp=el.querySelector("#bm-go-plan"); if(gp) gp.addEventListener("click",()=>{ showView("plan"); if(typeof renderPlanRec==="function") renderPlanRec(); if(typeof renderPlanCalc==="function") renderPlanCalc(); });
 }
