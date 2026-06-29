@@ -233,6 +233,20 @@ summary.bt-cap:hover span{color:var(--accent-ink)}
 .bm-med{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--accent)}
 .bm-foot{display:flex;flex-wrap:wrap;gap:3px 10px;font-size:11px;color:var(--text2);font-variant-numeric:tabular-nums;border-top:1px solid var(--line);padding-top:8px}
 .bm-den{color:var(--faint)}
+/* Sectors — image cards per focus area */
+.sectors-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px}
+.sec-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.sec-card:hover{box-shadow:0 2px 4px rgba(35,28,40,.06),0 18px 40px rgba(35,28,40,.12)}
+.sec-img{position:relative;aspect-ratio:16/8;background:var(--panel2)}
+.sec-img img{width:100%;height:100%;object-fit:cover;display:block}
+.sec-icon{position:absolute;left:16px;bottom:-17px;width:36px;height:36px;border-radius:50%;background:var(--c);display:grid;place-items:center;box-shadow:0 3px 9px rgba(0,0,0,.28);border:2px solid var(--panel)}
+.sec-icon svg{width:19px;height:19px;fill:none;stroke:#fff;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.sec-body{padding:26px 18px 18px;display:flex;flex-direction:column;flex:1}
+.sec-body h3{font-family:var(--serif);font-weight:600;font-size:16.5px;line-height:1.2;margin:0 0 7px}
+.sec-body p{font-size:12.5px;color:var(--text2);line-height:1.5;margin:0 0 16px;flex:1}
+.sec-btn{font:inherit;font-size:12.5px;font-weight:600;color:var(--accent-ink);background:var(--panel);border:1px solid var(--line2);border-radius:10px;padding:9px 12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.sec-btn:hover{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 6%,var(--panel))}
+.sec-n{font-size:10.5px;color:var(--text2);background:var(--panel2);border-radius:20px;padding:1px 8px;font-variant-numeric:tabular-nums}
 .plan{display:flex;flex-direction:column;gap:18px;max-width:1120px}
 .pcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:18px 20px}
 .pcard-h{display:flex;align-items:center;gap:10px;margin-bottom:14px}

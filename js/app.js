@@ -50,13 +50,14 @@ function usdBasisLabel(){ return BASIS==="real"?"real 2024 USD (CPI-adjusted)":"
 
 /* nf, fmtUSD, fmtCompact, fmtNum, fmtPct, esc — see js/lib.js */
 
-const PS={q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",sort:"_usd",dir:-1,page:1,size:50};
+const PS={q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",cl:null,clLabel:"",sort:"_usd",dir:-1,page:1,size:50};
 const OS={q:"",s:"",sn:"",t:"",prog:"",sort:"_ach",dir:-1,page:1,size:50};
 
 function uniq(arr,key){ return [...new Set(arr.map(x=>x[key]).filter(Boolean))].sort(); }
 function fillSelect(id,vals,label){ const el=document.getElementById(id); if(!el) return; el.innerHTML="<option value=''>"+label+"</option>"+vals.map(v=>"<option>"+esc(v)+"</option>").join(""); }
 
 function filterPrograms(){ const q=PS.q.toLowerCase(); return PROGRAMS.filter(p=>{
+  if(PS.cl&&PS.cl.length&&typeof guideTheme==="function"&&!PS.cl.includes(guideTheme(p.sc))) return false;
   if(PS.d&&p.d!==PS.d) return false; if(PS.rg&&p.rg!==PS.rg) return false; if(PS.co&&p.co!==PS.co) return false;
   if(PS.sc&&p.sn!==PS.sc) return false; if(PS.sta&&p.sta!==PS.sta) return false;
   if(PS.re==="Y"&&!p.re) return false; if(PS.re==="N"&&p.re) return false;
@@ -140,12 +141,13 @@ const CHIP_DEFS=[{f:"d",label:"Donor",sel:"f-donor"},{f:"prov",label:"Donor coun
 function chipText(f,v){ return f==="re" ? (v==="Y"?"Reports results":"No results") : v; }
 function renderChips(){
   const el=document.getElementById("chips"); if(!el) return;
-  const active=CHIP_DEFS.filter(c=>PS[c.f]); const cnt=active.length;
+  const active=CHIP_DEFS.filter(c=>PS[c.f]); const cnt=active.length+(PS.cl?1:0);
   const fc=document.getElementById("filters-count"); if(fc){ fc.textContent=cnt; fc.hidden=cnt===0; }
   const fb=document.getElementById("filters-btn"); if(fb) fb.classList.toggle("on",cnt>0);
   if(!cnt){ el.innerHTML=""; el.hidden=true; return; }
   el.hidden=false;
-  el.innerHTML=active.map(c=>"<button class='chip-x' data-f='"+c.f+"' data-sel='"+c.sel+"'>"+esc(c.label)+": "+esc(chipText(c.f,PS[c.f]))+" <span class='x'>×</span></button>").join("")+"<button class='chip-reset'>Reset all</button>";
+  el.innerHTML=(PS.cl?"<button class='chip-x' data-clear='cluster'>Sector area: "+esc(PS.clLabel)+" <span class='x'>×</span></button>":"")+
+    active.map(c=>"<button class='chip-x' data-f='"+c.f+"' data-sel='"+c.sel+"'>"+esc(c.label)+": "+esc(chipText(c.f,PS[c.f]))+" <span class='x'>×</span></button>").join("")+"<button class='chip-reset'>Reset all</button>";
 }
 function buildSortMenu(){ const m=document.getElementById("sort-menu"); if(!m) return;
   m.innerHTML=PCOLS.filter(c=>c.k!=="src").map(c=>{ const on=PS.sort===c.k; return "<button class='sort-item"+(on?" on":"")+"' data-k='"+c.k+"'>"+esc(c.t)+(on?" <span class='sarr'>"+(PS.dir<0?"↓":"↑")+"</span>":"")+"</button>"; }).join("");
@@ -231,6 +233,42 @@ function renderBenchmarks(){
     bmGrid(active.specs,active.showTotal,active.showDot)+
     "<p class='bnote'>Computed live over the "+nf.format(PROGRAMS.length)+" embedded programmes (a global sample; the recent IATI universe per sector is larger — see &lsquo;in IATI&rsquo; and #read_me). <b>Cost-per-beneficiary and aggregate achievement are intentionally absent</b> — IATI reach and target/actual fields are non-comparable.</p>";
   el.querySelectorAll(".bm-tab").forEach(b=>b.addEventListener("click",()=>{ BM.view=b.getAttribute("data-view"); renderBenchmarks(); }));
+}
+
+/* ---------- Sectors (visual landing — image cards per focus area) ---------- */
+const SECTOR_CARDS=[
+  {key:"education",title:"Education",color:"#5b5fe0",themes:["education"],
+   desc:"Educational infrastructure, access to digital learning, and literacy — benchmarked against comparable real programmes.",
+   icon:"<svg viewBox='0 0 24 24'><path d='M12 4 2 9l10 5 8-4'/><path d='M6 11.5V16c0 1.1 2.7 2.5 6 2.5s6-1.4 6-2.5v-4.5'/><path d='M20 9v5'/></svg>"},
+  {key:"agriculture",title:"Agriculture & Rural Development",color:"#1f9d72",themes:["agriculture","environment"],
+   desc:"Crop and livelihood programmes, irrigation, value chains, climate and rural development.",
+   icon:"<svg viewBox='0 0 24 24'><path d='M12 21v-8'/><path d='M12 13c-4 0-6-2.2-6-6.5 4.2 0 6 2.2 6 6.5Z'/><path d='M12 13c4 0 6-2.2 6-6.5-4.2 0-6 2.2-6 6.5Z'/></svg>"},
+  {key:"health",title:"Health & Nutrition",color:"#d65745",themes:["health","nutrition","wash","humanitarian"],
+   desc:"Primary health care, nutrition, WASH and humanitarian response — facility readiness, essential services and community reach.",
+   icon:"<svg viewBox='0 0 24 24'><path d='M12 21s-7-4.6-7-10.2A4.1 4.1 0 0 1 12 8a4.1 4.1 0 0 1 7 2.8C19 16.4 12 21 12 21Z'/></svg>"},
+  {key:"infrastructure",title:"Infrastructure & Energy",color:"#2f78c4",themes:["energy","infrastructure","economic"],
+   desc:"Clean energy and electrification, transport, private sector and major public infrastructure.",
+   icon:"<svg viewBox='0 0 24 24'><path d='M13 2 4 14h6l-1 8 9-12h-6l1-8Z'/></svg>"},
+  {key:"governance",title:"Governance & Civil Society",color:"#566074",themes:["governance","social","multisector"],
+   desc:"Public financial management, civil society, social protection and democratic participation.",
+   icon:"<svg viewBox='0 0 24 24'><path d='M3 9 12 3l9 6'/><path d='M5 9v9M9 9v9M15 9v9M19 9v9'/><path d='M3 18.5h18'/></svg>"}
+];
+function renderSectors(){
+  const el=document.getElementById("sectors-grid"); if(!el) return;
+  el.innerHTML=SECTOR_CARDS.map(s=>{
+    const n=PROGRAMS.filter(p=>p.sc&&typeof guideTheme==="function"&&s.themes.includes(guideTheme(p.sc))).length;
+    return "<div class='sec-card'>"+
+      "<div class='sec-img'><img src='assets/sectors/"+s.key+".jpg' alt='"+eatt(s.title)+"' loading='lazy'>"+
+        "<span class='sec-icon' style='--c:"+s.color+"'>"+s.icon+"</span></div>"+
+      "<div class='sec-body'><h3>"+esc(s.title)+"</h3><p>"+esc(s.desc)+"</p>"+
+        "<button class='sec-btn' data-key='"+s.key+"'>View Benchmarks <span class='sec-n'>"+fmtNum(n)+"</span></button></div>"+
+    "</div>";
+  }).join("");
+  el.querySelectorAll(".sec-btn").forEach(b=>b.addEventListener("click",()=>{
+    const s=SECTOR_CARDS.find(x=>x.key===b.getAttribute("data-key")); if(!s) return;
+    Object.assign(PS,{q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",cl:s.themes,clLabel:s.title,page:1});
+    reflectControls(); showView("programmes"); renderPrograms();
+  }));
 }
 
 function dl(name,text){ const b=new Blob([text],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(b),a=document.createElement("a"); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1500); }
@@ -726,6 +764,7 @@ function showView(name){
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("show",v.id==="view-"+name));
   document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===name));
   if(name==="charts") renderCharts();
+  if(name==="sectors") renderSectors();
   syncURL();
 }
 function setTheme(t){ document.documentElement.setAttribute("data-theme",t);
@@ -1048,7 +1087,7 @@ function init(){ try {
   on("pgsize","change",e=>{PS.size=(e.target.value==="all"?1e9:parseInt(e.target.value));PS.page=1;renderPrograms();});
   on("p-prev","click",()=>{if(PS.page>1){PS.page--;renderPrograms();}});
   on("p-next","click",()=>{PS.page++;renderPrograms();});
-  on("reset","click",()=>{Object.assign(PS,{q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",page:1});
+  on("reset","click",()=>{Object.assign(PS,{q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",cl:null,clLabel:"",page:1});
     ["q","sq","f-donor","f-provider","f-region","f-country","f-sector","f-status","f-res"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});renderPrograms();});
   on("export","click",exportPrograms);
 
@@ -1076,7 +1115,9 @@ function init(){ try {
   on("sort-btn","click",e=>{ e.stopPropagation(); if(_fp)_fp.hidden=true; if(_sm){ buildSortMenu(); _sm.hidden=!_sm.hidden; } });
   const _chips=document.getElementById("chips"); if(_chips) _chips.addEventListener("click",e=>{
     if(e.target.closest(".chip-reset")){ const r=document.getElementById("reset"); if(r)r.click(); return; }
-    const x=e.target.closest(".chip-x"); if(!x)return; const f=x.getAttribute("data-f"),sel=x.getAttribute("data-sel");
+    const x=e.target.closest(".chip-x"); if(!x)return;
+    if(x.getAttribute("data-clear")==="cluster"){ PS.cl=null; PS.clLabel=""; PS.page=1; renderPrograms(); return; }
+    const f=x.getAttribute("data-f"),sel=x.getAttribute("data-sel");
     PS[f]=""; const s=document.getElementById(sel); if(s)s.value=""; PS.page=1; renderPrograms(); });
   if(_sm) _sm.addEventListener("click",e=>{ const it=e.target.closest(".sort-item"); if(!it)return; const k=it.getAttribute("data-k"); if(PS.sort===k)PS.dir*=-1; else{PS.sort=k;PS.dir=PSTR.split(" ").includes(k)?1:-1;} renderPrograms(); buildSortMenu(); });
   document.addEventListener("click",e=>{ if(_fp&&!_fp.hidden&&!e.target.closest("#filters-panel,#filters-btn"))_fp.hidden=true; if(_sm&&!_sm.hidden&&!e.target.closest("#sort-menu,#sort-btn"))_sm.hidden=true; });
@@ -1098,7 +1139,7 @@ function init(){ try {
     const use=e.target.closest&&e.target.closest(".pl-use-proj"); if(use){ seedFromProject(PROGRAMS[+use.getAttribute("data-i")]); return; }
     const info=e.target.closest&&e.target.closest(".pcomp-info[data-i]"); if(info) openCard(PROGRAMS[+info.getAttribute("data-i")]); });
 
-  setTheme("light"); renderMeta(); buildFX(); renderUniverse(); renderDQ(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
+  setTheme("light"); renderMeta(); buildFX(); renderUniverse(); renderDQ(); renderSectors(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
   route(); URL_READY=true; syncURL();
   } catch(err){
     if(typeof console!=="undefined"&&console.error) console.error("Benchmark DB init failed:",err);

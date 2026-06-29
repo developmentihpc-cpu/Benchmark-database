@@ -16,7 +16,7 @@
 <meta name="twitter:description" content="Real comparable aid programmes from IATI: median budgets, durations and reporting rates by sector, donor type and region.">
 <meta name="twitter:image" content="https://developmentihpc-cpu.github.io/Benchmark-database/assets/og.svg">
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/styles.css?v=6">
+<link rel="stylesheet" href="css/styles.css?v=7">
 </head>
 <body><div class="app">
 <noscript><div style="max-width:560px;margin:14vh auto;padding:28px;text-align:center;font-family:Georgia,serif;color:#33424f">
@@ -31,6 +31,7 @@
  <div class="nav-group">Views</div>
  <nav>
   <button class="nav-item active" data-view="programmes"><svg class="ico" viewBox="0 0 16 16"><rect x="2" y="3" width="12" height="10" rx="1"/><path d="M2 6.2h12M6.5 6.2V13"/></svg><span>Programmes</span><b class="badge" id="badge-prog">0</b></button>
+  <button class="nav-item" data-view="sectors"><svg class="ico" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg><span>Sectors</span></button>
   <button class="nav-item" data-view="benchmarks"><svg class="ico" viewBox="0 0 16 16"><path d="M2 13.5h12"/><path d="M4 13V8M8 13V4M12 13V10"/></svg><span>Benchmarks</span></button>
   <button class="nav-item" data-view="charts"><svg class="ico" viewBox="0 0 16 16"><path d="M2 2v12h12"/><path d="M4.5 11.5l3-3 2 2 3.5-4"/></svg><span>Charts</span></button>
   <button class="nav-item" data-view="countries"><svg class="ico" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12"/></svg><span>Countries</span></button>
@@ -82,6 +83,11 @@
    <div class="pager"><span>rows</span><select id="pgsize" aria-label="Rows per page"><option>25</option><option selected>50</option><option>100</option><option value="all">all</option></select>
     <button id="p-prev" aria-label="Previous page">‹</button><span id="p-page">1 / 1</span><button id="p-next" aria-label="Next page">›</button></div>
   </div>
+ </section>
+
+ <section id="view-sectors" class="view">
+  <header class="topbar"><div class="tb-title"><h1>Sectors</h1><p>Explore programmatic focus areas and their benchmark datasets — open one to see its real comparable programmes and live medians. Cited design guidance for each sits in <b>Plan a programme</b>.</p></div></header>
+  <div id="sectors-grid" class="sectors-grid"></div>
  </section>
 
  <section id="view-benchmarks" class="view">
@@ -221,8 +227,8 @@
 <div id="pl-brief" class="pl-brief" aria-hidden="true"></div>
 <script src="js/lib.js"></script>
 <script src="js/i18n.js"></script>
-<script src="js/geo.js?v=6"></script>
-<script src="js/guide.js?v=6"></script>
+<script src="js/geo.js?v=7"></script>
+<script src="js/guide.js?v=7"></script>
 <script src="js/data.js"></script>
-<script src="js/app.js?v=6"></script>
+<script src="js/app.js?v=7"></script>
 </body></html>
