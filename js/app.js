@@ -362,7 +362,7 @@ function concentration(rows){
 function recStat(k,v,s){ return "<div class='rs1'><div class='rs1-k'>"+esc(k)+"</div><div class='rs1-v'>"+v+"</div><div class='rs1-s'>"+esc(s)+"</div></div>"; }
 function renderPlanRec(){
   const el=document.getElementById("pl-rec"); if(!el) return;
-  if(!PL.sector){ el.innerHTML="<div class='pcard-h'><span class='pstep'>2</span><h2>Typical for comparable programmes</h2></div><p class='pscope'>Choose an intervention / sector above to see what comparable programmes look like.</p>"; return; }
+  if(!PL.sector){ el.innerHTML="<div class='pcard-h'><span class='pstep'>2</span><h2>Compare — typical for similar programmes</h2></div><p class='pscope'>Choose an intervention / sector above to see what comparable programmes look like.</p>"; return; }
   const {rows,scope}=planCohort(); const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur");
   const resPct=rows.length?rows.filter(r=>r.re).length/rows.length:null;
   const mix={}; rows.forEach(r=>mix[r.d]=(mix[r.d]||0)+1);
@@ -371,7 +371,7 @@ function renderPlanRec(){
   const provTopStr=Object.entries(provM).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>esc(k)+" "+Math.round(100*v/rows.length)+"%").join(" · ");
   const conc=concentration(rows), ach=cohortAch(rows);
   const med=b.med||0; const comp=rows.slice().sort((x,y)=>Math.abs((x._usd||0)-med)-Math.abs((y._usd||0)-med)).slice(0,5);
-  let h="<div class='pcard-h'><span class='pstep'>2</span><h2>Typical for comparable programmes</h2></div>";
+  let h="<div class='pcard-h'><span class='pstep'>2</span><h2>Compare — typical for similar programmes</h2></div>";
   h+="<p class='pscope'>What <b>"+rows.length+"</b> comparable programmes look like — "+esc(scope)+". <span class='pbasis'>figures in "+esc(usdBasisLabel())+"</span></p>";
   h+="<p class='pnote-soft'>These are what similar programmes <b>cost</b>, not what yours <b>should</b>. Use them as context, then design to your own scope.</p>";
   if(rows.length<8) h+="<p class='pflag'>Thin sample — treat as indicative, or widen the need.</p>";
@@ -432,6 +432,17 @@ function renderPlanCalc(){
   const bp=pctRank(b.arr,budget), dp=pctRank(d.arr,dur), burnp=(burn!=null)?pctRank(bn.arr,burn):null;
   const durFmt=v=>Math.round(v)+" mo", burnFmt=v=>fmtUSD(v)+"/mo";
   let h=PL.source?"<p class='pl-srcline'>Seeded from <b>"+esc(PL.source)+"</b> — a starting point; adjust below.</p>":"";
+  // ── headline comparison: your plan vs the cohort's median + middle 50% ──
+  const cmpRows=[["Budget",budget,b,fmtUSD],["Duration (mo)",dur,d,v=>Math.round(v)+""],["Monthly burn",burn,bn,v=>fmtUSD(v)+"/mo"]];
+  const cmpBody=cmpRows.filter(r=>r[2].med!=null).map(function(r){ const your=r[1],s=r[2],fmt=r[3];
+    const diff=(your!=null&&s.med)?Math.round(100*(your-s.med)/s.med):null;
+    const dcls=diff==null?"dim":(Math.abs(diff)>=50?"pcmp-out":"pcmp-ok");
+    return "<tr><td>"+r[0]+"</td><td class='c-num strong'>"+(your==null?"<span class='dim'>— set it</span>":fmt(your))+"</td>"+
+      "<td class='c-num'>"+fmt(s.med)+"</td><td class='c-num dim'>"+(s.p25==null?"—":fmt(s.p25)+"–"+fmt(s.p75))+"</td>"+
+      "<td class='c-num "+dcls+"'>"+(diff==null?"—":(diff>0?"+":"")+diff+"%")+"</td></tr>"; }).join("");
+  if(cmpBody) h+="<div class='pcmp'><div class='pcmp-h'>Your plan vs comparable programmes <span class='muted'>("+b.n+" in cohort)</span></div>"+
+    "<table class='pcmp-t'><thead><tr><th>Metric</th><th class='c-num'>Your plan</th><th class='c-num'>Typical</th><th class='c-num'>Middle 50%</th><th class='c-num'>vs median</th></tr></thead><tbody>"+cmpBody+"</tbody></table>"+
+    "<p class='pcmp-note'>“vs median” shows how far your value sits from typical; <span class='pcmp-out'>±50% or more</span> is an outlier worth a reason — not necessarily wrong.</p></div>";
   h+="<div class='pcalc'>"+
     calcStat("Monthly burn",burn==null?"—":fmtUSD(burn)+"/mo","budget ÷ duration")+
     calcStat("Cost / person",cpp==null?"—":"$"+nf.format(Math.round(cpp)),target?"your budget ÷ your target":"set a target")+
@@ -445,12 +456,12 @@ function renderPlanCalc(){
   if(burn!=null&&bn.n) reads.push("Your spend rate of <b>"+fmtUSD(burn)+"/mo</b> is at the <b>"+ord(Math.round(burnp*100))+" percentile</b> of comparable programmes.");
   if(reads.length) h+="<div class='preads'>"+reads.map(r=>"<p>"+r+"</p>").join("")+"</div>";
   const f=[];
-  if(budget!=null&&b.n>=8){ if(budget<b.p25) f.push("Budget is below the middle 50% ("+fmtUSD(b.p25)+"–"+fmtUSD(b.p75)+") of comparable programmes — trim scope/duration, or check you're not under-resourcing."); else if(budget>b.p75) f.push("Budget is above the middle 50% ("+fmtUSD(b.p25)+"–"+fmtUSD(b.p75)+") — make sure scope justifies it."); }
-  if(dur!=null&&d.n>=8){ if(dur<d.p25) f.push("Duration is shorter than most comparable programmes ("+Math.round(d.p25)+"–"+Math.round(d.p75)+" mo) — outcomes may need more time to land."); else if(dur>d.p75) f.push("Duration is longer than most comparable programmes ("+Math.round(d.p25)+"–"+Math.round(d.p75)+" mo) — long programmes can drift; check the case for the extra time."); }
+  if(budget!=null&&b.n>=8){ if(budget<b.p25) f.push("Budget is below the middle 50% ("+fmtUSD(b.p25)+"–"+fmtUSD(b.p75)+") of comparable programmes — trim scope/duration, or check you're not under-resourcing."); else if(budget>b.p75) f.push("Budget is above the middle 50% ("+fmtUSD(b.p25)+"–"+fmtUSD(b.p75)+") — make sure scope justifies it; consider phasing implementation, trimming scope, or checking for cost drivers."); }
+  if(dur!=null&&d.n>=8){ if(dur<d.p25) f.push("Duration is shorter than most comparable programmes ("+Math.round(d.p25)+"–"+Math.round(d.p75)+" mo) — consider extending the timeline or phasing activities so outcomes have time to land."); else if(dur>d.p75) f.push("Duration is longer than most comparable programmes ("+Math.round(d.p25)+"–"+Math.round(d.p75)+" mo) — long programmes can drift; check the case for the extra time."); }
   if(burn!=null&&bn.n>=8){ if(burn>bn.p75) f.push("Monthly burn is high vs peers ("+fmtUSD(bn.p25)+"–"+fmtUSD(bn.p75)+"/mo) — an ambitious delivery pace; check absorption capacity."); else if(burn<bn.p25) f.push("Monthly burn is low vs peers ("+fmtUSD(bn.p25)+"–"+fmtUSD(bn.p75)+"/mo) — a long, thinly-resourced programme."); }
   if(target!=null){ const ach=cohortAch(rows); if(ach) f.push("Comparable programmes reported a median actual of "+Math.round(ach.med*100)+"% of target ("+ach.n+" indicators); only "+Math.round(ach.hit100*100)+"% met target in full. Plan to expected actuals, not the nominal target."); }
   if(cpp!=null) f.push("Cost per person is your own figure (budget ÷ target). Comparable programmes rarely report reach, so there's no external benchmark — sense-check against sector unit-cost studies.");
-  if(f.length) h+="<ul class='pflags'>"+f.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>";
+  if(f.length) h+="<div class='pflag-h'>Design checks</div><ul class='pflags'>"+f.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>";
   h+="<p class='pbasis2'>Budget &amp; burn figures in "+esc(usdBasisLabel())+" — switch nominal ↔ real in the sidebar.</p>";
   el.innerHTML=h; syncURL();
 }
@@ -529,12 +540,31 @@ function buildPlanBrief(){
   h+="<footer class='brief-f'>Benchmark DB · IATI Standard via the IATI Datastore · medians over an embedded sample in "+esc(usdBasisLabel())+" · indicative, not a census.</footer></div>";
   el.innerHTML=h;
 }
+/* Quick-start scenarios — pre-fill the comparator and seed a plan from the median. */
+const PL_PRESETS=[
+ {label:"Education · Kenya", country:"Kenya", sector:"Primary education", donor:"Bilateral"},
+ {label:"Health · multilateral", sector:"Basic health care", donor:"Multilateral"},
+ {label:"WASH · Ethiopia", country:"Ethiopia", sector:"Basic drinking water"},
+ {label:"Humanitarian response", sector:"Emergency response"},
+ {label:"Governance & PFM", sector:"Public sector policy & PFM", donor:"Bilateral"},
+ {label:"Agriculture", sector:"Agricultural development"}
+];
+function applyPreset(p){
+  PL.country=p.country||""; PL.sector=p.sector||PL.sector; PL.donor=p.donor||""; PL.prov="";
+  setVal("pl-country",PL.country); setVal("pl-sector",PL.sector); setVal("pl-donor",PL.donor); setVal("pl-prov","");
+  renderPlanRec();
+  const {rows}=planCohort(); const b=statsOf(rows,"_usd"),d=statsOf(rows,"_dur");
+  seedPlan(b.med,d.med,"preset: "+p.label);
+}
 function wirePlan(){
   fillSelect("pl-country",ALL_COUNTRIES,"Any country");
   fillSelect("pl-sector",uniq(PROGRAMS,"sn"),"Select sector");
   fillSelect("pl-donor",DONORS.filter(d=>PROGRAMS.some(p=>p.d===d)),"Any donor type");
   fillSelect("pl-prov",uniq(PROGRAMS.filter(p=>p.pcc),"pn"),"Any donor country");
   setVal("pl-sector",PL.sector);
+  const _pc=document.getElementById("pl-preset-chips");
+  if(_pc){ _pc.innerHTML=PL_PRESETS.map((p,i)=>"<button type='button' class='pl-chip' data-i='"+i+"'>"+esc(p.label)+"</button>").join("");
+    _pc.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest(".pl-chip"); if(b) applyPreset(PL_PRESETS[+b.getAttribute("data-i")]); }); }
   const on=(id,ev,fn)=>{const el=document.getElementById(id); if(el) el.addEventListener(ev,fn);};
   on("pl-country","change",e=>{PL.country=e.target.value;renderPlanRec();renderPlanCalc();});
   on("pl-sector","change",e=>{PL.sector=e.target.value;renderPlanRec();renderPlanCalc();});

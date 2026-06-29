@@ -16,7 +16,7 @@
 <meta name="twitter:description" content="Real comparable aid programmes from IATI: median budgets, durations and reporting rates by sector, donor type and region.">
 <meta name="twitter:image" content="https://developmentihpc-cpu.github.io/Benchmark-database/assets/og.svg">
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/styles.css?v=3">
+<link rel="stylesheet" href="css/styles.css?v=4">
 </head>
 <body><div class="app">
 <noscript><div style="max-width:560px;margin:14vh auto;padding:28px;text-align:center;font-family:Georgia,serif;color:#33424f">
@@ -103,9 +103,11 @@
 
  <section id="view-plan" class="view">
   <header class="topbar"><div class="tb-title"><h1>Plan a programme</h1><p><b>Choose your comparator group first</b> — country, sector and funder — then see the typical budget, duration and reach of those comparable real programmes, and place your draft against them. The cohort is shown before any number, and flagged when it is thin or dominated by one funder.</p></div></header>
+  <div class="pl-value"><b>Benchmark your design against 6,600+ real development programmes.</b> <span class="pl-flow"><b>Design</b> your programme → <b>Compare</b> against similar ones → <b>Refine</b> the gaps</span> — to a realistic scope, budget and duration. <span class="muted">Reference values, not targets.</span></div>
+  <div class="pl-presets"><span class="pl-presets-l">Quick start:</span><div id="pl-preset-chips"></div></div>
   <div class="plan">
    <div class="pcard">
-    <div class="pcard-h"><span class="pstep">1</span><h2>Define the need</h2></div>
+    <div class="pcard-h"><span class="pstep">1</span><h2>Design — define the need</h2></div>
     <div class="pgrid">
      <label>Country<select id="pl-country"></select></label>
      <label>Intervention / sector<select id="pl-sector"></select></label>
@@ -117,7 +119,7 @@
    </div>
    <div class="pcard" id="pl-rec"></div>
    <div class="pcard" id="pl-planwrap">
-    <div class="pcard-h"><span class="pstep">3</span><h2>Your programme plan</h2>
+    <div class="pcard-h"><span class="pstep">3</span><h2>Refine — your programme plan</h2>
      <div class="tb-actions"><button id="pl-reset" class="btn ghost">Reset to typical</button><button id="pl-print" class="btn ghost">⎙ Print brief</button><button id="pl-add" class="btn">+ Add to basket</button></div></div>
     <p class="phint">Seeded from typical comparable programmes — a <b>starting point, not a recommendation</b>. Adjust every field to your own design.</p>
     <div class="pgrid">
@@ -129,6 +131,15 @@
     <div id="pl-calc"></div>
    </div>
    <div class="pcard" id="pl-basket"></div>
+   <div class="pcard pl-caveat">
+    <div class="pcard-h"><h2>Using benchmarks for design</h2></div>
+    <ul>
+     <li>Benchmarks are <b>historical medians from real programmes — not targets, standards, or predictions</b> of future performance.</li>
+     <li>Use them to check whether a design is <b>typical or an outlier</b>, not to judge it &ldquo;right&rdquo; or &ldquo;wrong&rdquo;.</li>
+     <li>Reported results often fall short of targets (see the reality-check) — design to <b>expected actuals</b>, not nominal targets.</li>
+     <li><b>Don&rsquo;t use them as strict targets or for accountability</b> — they describe the past, under a specific (IATI-only) sample.</li>
+    </ul>
+   </div>
   </div>
  </section>
 
@@ -209,7 +220,7 @@
 <div id="pl-brief" class="pl-brief" aria-hidden="true"></div>
 <script src="js/lib.js"></script>
 <script src="js/i18n.js"></script>
-<script src="js/geo.js?v=3"></script>
+<script src="js/geo.js?v=4"></script>
 <script src="js/data.js"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/app.js?v=4"></script>
 </body></html>
