@@ -16,7 +16,7 @@
 <meta name="twitter:description" content="Real comparable aid programmes from IATI: median budgets, durations and reporting rates by sector, donor type and region.">
 <meta name="twitter:image" content="https://developmentihpc-cpu.github.io/Benchmark-database/assets/og.svg">
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/styles.css?v=4">
+<link rel="stylesheet" href="css/styles.css?v=5">
 </head>
 <body><div class="app">
 <noscript><div style="max-width:560px;margin:14vh auto;padding:28px;text-align:center;font-family:Georgia,serif;color:#33424f">
@@ -179,6 +179,7 @@
    <div class="tagdef"><b>DERIVED</b> — computed from reported figures: duration from dates, ≈USD via FX, real (constant-2024) USD via US CPI, achieved share = actual/target.</div>
    <div class="tagdef"><b>ESTIMATE</b> — an educated value anchored on comparable reporters, always tagged. This dataset ships none: IATI's reach and target/actual fields proved too inconsistent to anchor a reliable cost or achievement estimate.</div>
    <div class="tagdef"><b>GAP</b> — no defensible basis, so left blank — never guessed (see cost-per-beneficiary).</div>
+   <div class="tagdef"><b>REFERENCE</b> — external standards and evidence (not from this dataset), used for the sector <b>design guidance</b> in the planner. Each point is attributed to a named, linked source (e.g. Sphere, WHO/DCP3, GEEAP, PEFA, IFAD/FAO, ESMAP, ALNAP, OECD-DAC) and flagged indicative — validate locally; not a target.</div>
    <h2>Key caveats</h2>
    <ol class="cav">
     <li><b>Cost per beneficiary is deliberately not computed.</b> IATI reach indicators are non-comparable — they mix direct beneficiaries, indirect/population reach (one activity claimed 30,000,000 reached) and non-people counts (hectares, research products). Dividing budget by these is meaningless; raw reach is kept with its indicator label so you can judge each. For unit costs use sector studies, Sphere and cluster guidance.</li>
@@ -220,7 +221,8 @@
 <div id="pl-brief" class="pl-brief" aria-hidden="true"></div>
 <script src="js/lib.js"></script>
 <script src="js/i18n.js"></script>
-<script src="js/geo.js?v=4"></script>
+<script src="js/geo.js?v=5"></script>
+<script src="js/guide.js?v=5"></script>
 <script src="js/data.js"></script>
-<script src="js/app.js?v=4"></script>
+<script src="js/app.js?v=5"></script>
 </body></html>

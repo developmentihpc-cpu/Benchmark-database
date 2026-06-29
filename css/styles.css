@@ -282,6 +282,21 @@ code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background
 .pcmp-note{font-size:11px;color:var(--faint);margin:7px 0 0}.pcmp-note .pcmp-out{font-weight:600}
 .pl-caveat ul{margin:0;padding-left:18px;font-size:12.5px;color:var(--text2);line-height:1.5}
 .pl-caveat li{margin-bottom:6px}.pl-caveat b{color:var(--text)}
+/* sector design guidance (cited reference layer) */
+.pguide{margin:6px 0 14px;border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:12px;background:var(--panel2);overflow:hidden}
+.pguide>summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:10px;padding:11px 14px;font-weight:600}
+.pguide>summary::-webkit-details-marker{display:none}
+.pguide>summary::before{content:"▸";color:var(--text2);font-size:11px;flex:none;transition:transform .12s}
+.pguide[open]>summary::before{transform:rotate(90deg)}
+.pguide-t{font-family:var(--serif);font-size:14px}
+.pguide-tag{margin-left:auto;font-size:9.5px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--accent-ink);background:color-mix(in srgb,var(--accent) 14%,transparent);padding:2px 7px;border-radius:5px;white-space:nowrap}
+.pguide-body{padding:2px 14px 13px}
+.pguide-sec{margin-top:10px}
+.pguide-sec h4{margin:0 0 5px;font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--text2);font-weight:600}
+.pguide-sec ul{margin:0;padding-left:17px;font-size:12.5px;color:var(--text);line-height:1.5}
+.pguide-sec li{margin-bottom:4px}
+.pguide-src{margin:12px 0 0;padding-top:10px;border-top:1px solid var(--line);font-size:11px;color:var(--text2);line-height:1.5}
+.pguide-src a{color:var(--accent-ink)}
 .rowmore{color:var(--accent-ink);font-size:12px;white-space:nowrap}
 tr.crow-click{cursor:pointer}
 tr.crow-click:hover td{background:color-mix(in srgb,var(--accent) 7%,transparent)}

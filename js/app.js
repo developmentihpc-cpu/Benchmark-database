@@ -360,6 +360,20 @@ function concentration(rows){
   return null;
 }
 function recStat(k,v,s){ return "<div class='rs1'><div class='rs1-k'>"+esc(k)+"</div><div class='rs1-v'>"+v+"</div><div class='rs1-s'>"+esc(s)+"</div></div>"; }
+/* Cited, theme-based design guidance for the selected sector (REFERENCE layer). */
+function guideCardHTML(sc){
+  if(typeof GUIDE_THEME==="undefined"||typeof guideTheme!=="function"||!sc) return "";
+  const g=GUIDE_THEME[guideTheme(sc)]; if(!g) return "";
+  const ul=arr=>"<ul>"+arr.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>";
+  const src=g.sources.map(s=>"<a href=\""+eatt(s.u)+"\" target='_blank' rel='noopener'>"+esc(s.n)+"</a>").join(" · ");
+  return "<details class='pguide'><summary><span class='pguide-t'>Design guidance — "+esc(g.name)+"</span><span class='pguide-tag'>reference · external standards</span></summary>"+
+    "<div class='pguide-body'>"+
+      "<div class='pguide-sec'><h4>Typical activities</h4>"+ul(g.activities)+"</div>"+
+      "<div class='pguide-sec'><h4>Cost drivers</h4>"+ul(g.drivers)+"</div>"+
+      "<div class='pguide-sec'><h4>Common pitfalls</h4>"+ul(g.pitfalls)+"</div>"+
+      "<p class='pguide-src'><b>Sources:</b> "+src+" · <span class='muted'>external standards/evidence — indicative, validate locally; not targets.</span></p>"+
+    "</div></details>";
+}
 function renderPlanRec(){
   const el=document.getElementById("pl-rec"); if(!el) return;
   if(!PL.sector){ el.innerHTML="<div class='pcard-h'><span class='pstep'>2</span><h2>Compare — typical for similar programmes</h2></div><p class='pscope'>Choose an intervention / sector above to see what comparable programmes look like.</p>"; return; }
@@ -384,6 +398,7 @@ function renderPlanRec(){
   "</div>";
   if(provTopStr) h+="<p class='pmix'>Typical providing countries: <b>"+provTopStr+"</b></p>";
   if(ach) h+="<p class='pach'>Reality check: across <b>"+ach.n+"</b> comparable indicators with a target and an actual, the median actual was <b>"+Math.round(ach.med*100)+"%</b> of target; "+Math.round(ach.hit75*100)+"% reached ≥75%. <span class='muted'>IATI target/actual data is noisy — design to expected actuals, not nominal targets.</span></p>";
+  h+=guideCardHTML((rows[0]||PROGRAMS.find(p=>p.sn===PL.sector)||{}).sc);
   h+="<div class='pcomp'><div class='pcomp-h'>Comparable programmes — pick one to start from, or use the cohort median</div>"+comp.map(p=>
     "<div class='pcomp-row' data-i='"+p._i+"'><div class='pcomp-info crow-click' data-i='"+p._i+"'><span class='pcn'>"+esc(pName(p))+"</span><span class='pcm'>"+esc(p.co)+" · "+chip(p.d)+" · "+fmtUSD(p._usd)+" · "+(p._dur==null?"—":p._dur+" mo")+" · <span class='rowmore'>open ›</span></span></div><button class='pl-use-proj' data-i='"+p._i+"' title='Start your plan from this programme'>Use →</button></div>").join("")+"</div>";
   h+="<button id='pl-use' class='btn'>Use cohort median as a starting point →</button>";
