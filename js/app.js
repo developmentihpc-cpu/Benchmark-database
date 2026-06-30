@@ -50,11 +50,31 @@ function usdBasisLabel(){ return BASIS==="real"?"real 2024 USD (CPI-adjusted)":"
 
 /* nf, fmtUSD, fmtCompact, fmtNum, fmtPct, esc — see js/lib.js */
 
-const PS={q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",cl:null,clLabel:"",sort:"_usd",dir:-1,page:1,size:50};
+const PS={q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",org:"",cl:null,clLabel:"",sort:"_usd",dir:-1,page:1,size:50};
 const OS={q:"",s:"",sn:"",t:"",prog:"",sort:"_ach",dir:-1,page:1,size:50};
 
 function uniq(arr,key){ return [...new Set(arr.map(x=>x[key]).filter(Boolean))].sort(); }
 function fillSelect(id,vals,label){ const el=document.getElementById(id); if(!el) return; el.innerHTML="<option value=''>"+label+"</option>"+vals.map(v=>"<option>"+esc(v)+"</option>").join(""); }
+/* The funding organisation for a programme (named funder if any, else the reporter). */
+function funderName(p){ return (i18n(p.fn||p.r)||"").trim(); }
+/* Bilateral donors are countries; every other donor type is an organisation. */
+function isOrgDonor(d){ return !!d && d!=="Bilateral"; }
+/* The second donor filter is dual-purpose: a "Donor country" picker for bilateral/any,
+ * or a deduplicated "Donor organisation" picker once a non-country donor type is chosen. */
+function updateProviderFilter(){
+  const el=document.getElementById("f-provider"); if(!el) return;
+  if(isOrgDonor(PS.d)){
+    // distinct funders for this donor type; drop markup/blob artifacts from bad source records
+    const orgs=[...new Set(PROGRAMS.filter(p=>!p._agg&&p.d===PS.d).map(funderName).filter(s=>s&&!s.includes("<")))].sort((a,b)=>a.localeCompare(b));
+    fillSelect("f-provider",orgs,"Donor organisation: any");
+    el.setAttribute("aria-label","Filter by donor organisation");
+    el.value=PS.org||"";
+  } else {
+    fillSelect("f-provider",uniq(PROGRAMS.filter(p=>p.pcc),"pn"),"Donor country: any");
+    el.setAttribute("aria-label","Filter by donor country");
+    el.value=PS.prov||"";
+  }
+}
 
 function filterPrograms(){ const q=PS.q.toLowerCase(); return PROGRAMS.filter(p=>{
   if(PS.cl&&PS.cl.length&&typeof guideTheme==="function"&&!PS.cl.includes(guideTheme(p.sc))) return false;
@@ -62,6 +82,7 @@ function filterPrograms(){ const q=PS.q.toLowerCase(); return PROGRAMS.filter(p=
   if(PS.sc&&p.sn!==PS.sc) return false; if(PS.sta&&p.sta!==PS.sta) return false;
   if(PS.re==="Y"&&!p.re) return false; if(PS.re==="N"&&p.re) return false;
   if(PS.prov&&p.pn!==PS.prov) return false;
+  if(PS.org&&funderName(p)!==PS.org) return false;
   if(q&&!(((p.n||"")+" "+(p.name_en||"")).toLowerCase().includes(q)||(p.r||"").toLowerCase().includes(q)||(p.co||"").toLowerCase().includes(q))) return false;
   return true; }); }
 function filterOutcomes(){ const q=OS.q.toLowerCase(); return OUTCOMES.filter(o=>{
@@ -137,7 +158,7 @@ function renderPrograms(){
   { const tbl=document.getElementById("pb").closest("table"); if(tbl) tbl.classList.toggle("virtual",slice.length>200); }
   renderHead("ph",PCOLS,PS); renderStats(filtered); renderChips(); syncURL();
 }
-const CHIP_DEFS=[{f:"d",label:"Donor",sel:"f-donor"},{f:"prov",label:"Donor country",sel:"f-provider"},{f:"rg",label:"Region",sel:"f-region"},{f:"co",label:"Country",sel:"f-country"},{f:"sc",label:"Sector",sel:"f-sector"},{f:"sta",label:"Status",sel:"f-status"},{f:"re",label:"Results",sel:"f-res"}];
+const CHIP_DEFS=[{f:"d",label:"Donor",sel:"f-donor"},{f:"prov",label:"Donor country",sel:"f-provider"},{f:"org",label:"Donor organisation",sel:"f-provider"},{f:"rg",label:"Region",sel:"f-region"},{f:"co",label:"Country",sel:"f-country"},{f:"sc",label:"Sector",sel:"f-sector"},{f:"sta",label:"Status",sel:"f-status"},{f:"re",label:"Results",sel:"f-res"}];
 function chipText(f,v){ return f==="re" ? (v==="Y"?"Reports results":"No results") : v; }
 function renderChips(){
   const el=document.getElementById("chips"); if(!el) return;
@@ -944,7 +965,7 @@ let CURRENT_VIEW="programmes", URL_READY=false;
 function reflectControls(){
   const set=(id,v)=>{const el=document.getElementById(id); if(el) el.value=v;};
   set("q",PS.q); set("sq",PS.q); set("f-donor",PS.d); set("f-region",PS.rg); set("f-country",PS.co);
-  set("f-sector",PS.sc); set("f-status",PS.sta); set("f-res",PS.re); set("f-provider",PS.prov);
+  set("f-sector",PS.sc); set("f-status",PS.sta); set("f-res",PS.re); updateProviderFilter();
   set("pgsize",PS.size>=1e9?"all":String(PS.size));
   set("oq",OS.q); set("o-stream",OS.s); set("o-sector",OS.sn); set("o-type",OS.t);
   set("opgsize",OS.size>=1e9?"all":String(OS.size));
@@ -958,7 +979,7 @@ function syncURL(){
   if(BASIS==="real") qp.set("usd","real");
   if(CURRENT_VIEW==="programmes"){
     if(PS.q)qp.set("q",PS.q); if(PS.d)qp.set("donor",PS.d); if(PS.rg)qp.set("region",PS.rg); if(PS.co)qp.set("country",PS.co);
-    if(PS.sc)qp.set("sector",PS.sc); if(PS.sta)qp.set("status",PS.sta); if(PS.re)qp.set("results",PS.re); if(PS.prov)qp.set("provider",PS.prov);
+    if(PS.sc)qp.set("sector",PS.sc); if(PS.sta)qp.set("status",PS.sta); if(PS.re)qp.set("results",PS.re); if(PS.prov)qp.set("provider",PS.prov); if(PS.org)qp.set("org",PS.org);
     if(PS.sort!=="_usd")qp.set("sort",PS.sort); if(PS.dir!==-1)qp.set("dir",PS.dir);
     if(PS.page>1)qp.set("page",PS.page); if(PS.size!==50)qp.set("size",PS.size>=1e9?"all":PS.size);
   } else if(CURRENT_VIEW==="outcomes"){
@@ -993,7 +1014,7 @@ function route(){
     CS.sc=qp.get("sector")||""; CS.rg=qp.get("region")||""; CS.d=qp.get("donor")||"";
   } else if(!view||view==="programmes"){
     PS.q=qp.get("q")||""; PS.d=qp.get("donor")||""; PS.rg=qp.get("region")||""; PS.co=qp.get("country")||"";
-    PS.sc=qp.get("sector")||""; PS.sta=qp.get("status")||""; PS.re=qp.get("results")||""; PS.prov=qp.get("provider")||"";
+    PS.sc=qp.get("sector")||""; PS.sta=qp.get("status")||""; PS.re=qp.get("results")||""; PS.prov=qp.get("provider")||""; PS.org=qp.get("org")||"";
     if(qp.get("sort"))PS.sort=qp.get("sort"); if(qp.get("dir"))PS.dir=+qp.get("dir");
     if(qp.get("page"))PS.page=+qp.get("page"); const z=qp.get("size"); if(z)PS.size=(z==="all"?1e9:+z);
   }
@@ -1262,18 +1283,18 @@ function init(){ try {
   const on=(id,ev,fn)=>{ const el=document.getElementById(id); if(el) el.addEventListener(ev,fn); };
   on("q","input",e=>{PS.q=e.target.value;PS.page=1;renderPrograms();});
   on("sq","input",e=>{PS.q=e.target.value;const m=document.getElementById("q");if(m)m.value=e.target.value;PS.page=1;renderPrograms();showView("programmes");});
-  on("f-donor","change",e=>{PS.d=e.target.value;PS.page=1;renderPrograms();});
+  on("f-donor","change",e=>{PS.d=e.target.value;PS.prov="";PS.org="";updateProviderFilter();PS.page=1;renderPrograms();});
   on("f-region","change",e=>{PS.rg=e.target.value;PS.page=1;renderPrograms();});
   on("f-country","change",e=>{PS.co=e.target.value;PS.page=1;renderPrograms();});
   on("f-sector","change",e=>{PS.sc=e.target.value;PS.page=1;renderPrograms();});
   on("f-status","change",e=>{PS.sta=e.target.value;PS.page=1;renderPrograms();});
   on("f-res","change",e=>{PS.re=e.target.value;PS.page=1;renderPrograms();});
-  on("f-provider","change",e=>{PS.prov=e.target.value;PS.page=1;renderPrograms();});
+  on("f-provider","change",e=>{ if(isOrgDonor(PS.d)) PS.org=e.target.value; else PS.prov=e.target.value; PS.page=1;renderPrograms();});
   on("pgsize","change",e=>{PS.size=(e.target.value==="all"?1e9:parseInt(e.target.value));PS.page=1;renderPrograms();});
   on("p-prev","click",()=>{if(PS.page>1){PS.page--;renderPrograms();}});
   on("p-next","click",()=>{PS.page++;renderPrograms();});
-  on("reset","click",()=>{Object.assign(PS,{q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",cl:null,clLabel:"",page:1});
-    ["q","sq","f-donor","f-provider","f-region","f-country","f-sector","f-status","f-res"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});renderPrograms();});
+  on("reset","click",()=>{Object.assign(PS,{q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",org:"",cl:null,clLabel:"",page:1});
+    ["q","sq","f-donor","f-provider","f-region","f-country","f-sector","f-status","f-res"].forEach(id=>{const el=document.getElementById(id);if(el)el.value="";});updateProviderFilter();renderPrograms();});
   on("export","click",exportPrograms);
 
   on("oq","input",e=>{OS.q=e.target.value;OS.page=1;renderOutcomes();});
@@ -1303,7 +1324,10 @@ function init(){ try {
     const x=e.target.closest(".chip-x"); if(!x)return;
     if(x.getAttribute("data-clear")==="cluster"){ PS.cl=null; PS.clLabel=""; PS.page=1; renderPrograms(); return; }
     const f=x.getAttribute("data-f"),sel=x.getAttribute("data-sel");
-    PS[f]=""; const s=document.getElementById(sel); if(s)s.value=""; PS.page=1; renderPrograms(); });
+    PS[f]=""; const s=document.getElementById(sel); if(s)s.value="";
+    // clearing the donor type drops any org/country sub-filter and resets the dual-purpose picker
+    if(f==="d"){ PS.org=""; PS.prov=""; updateProviderFilter(); }
+    PS.page=1; renderPrograms(); });
   if(_sm) _sm.addEventListener("click",e=>{ const it=e.target.closest(".sort-item"); if(!it)return; const k=it.getAttribute("data-k"); if(PS.sort===k)PS.dir*=-1; else{PS.sort=k;PS.dir=PSTR.split(" ").includes(k)?1:-1;} renderPrograms(); buildSortMenu(); });
   document.addEventListener("click",e=>{ if(_fp&&!_fp.hidden&&!e.target.closest("#filters-panel,#filters-btn"))_fp.hidden=true; if(_sm&&!_sm.hidden&&!e.target.closest("#sort-menu,#sort-btn"))_sm.hidden=true; });
   const _mt=document.getElementById("menu-toggle"),_scrim=document.getElementById("navScrim");
