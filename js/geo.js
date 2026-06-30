@@ -7,7 +7,7 @@
  * region centre. */
 /* ISO2 codes for which a vendored flag SVG exists in assets/flags/ (from
  * flag-icons by lipis, MIT — see assets/flags/LICENSE). */
-const FLAG_CC = new Set(["de","gb","fi","ca","be","ch","us","nl","fr","au","ae","dk","nz","kr","no","it","se","bj","jp","es","ie","br","eu","bo","cn","mz","hn","mm","ls","af","gm","cd","mg","at","ro","sa","gn","ru","mn","pl","pk","kw","sk","sl","am","mc"]);
+const FLAG_CC = new Set(["ae","af","al","am","ao","ar","at","au","az","ba","bd","be","bf","bi","bj","bo","br","bt","bw","by","bz","ca","cd","cf","cg","ch","ci","cm","cn","co","cu","cv","de","dj","dk","do","dz","ec","eg","er","es","et","eu","fi","fj","fr","gb","gd","ge","gh","gm","gn","gq","gt","gw","hn","ht","id","ie","in","iq","ir","it","jm","jo","jp","ke","kg","kh","ki","km","kr","kw","kz","la","lb","lk","lr","ls","ly","ma","mc","md","me","mg","mh","mk","ml","mm","mn","mr","mu","mv","mw","mx","my","mz","na","ne","ng","ni","nl","no","np","nz","pe","pg","ph","pk","pl","ps","py","ro","rs","ru","rw","sa","sb","sd","se","sk","sl","sn","so","sr","ss","st","sv","sy","sz","td","tg","th","tj","tl","tn","to","tr","tz","ua","ug","us","uz","vc","ve","vn","vu","ws","xk","ye","za","zm","zw"]);
 const GEO_REGION_CENTER = {
   "Sub-Saharan Africa":[20,0], "MENA + Afg/Pak":[45,28], "South Asia":[80,22],
   "East Asia & Pacific":[115,5], "Latin Am. & Carib.":[-65,-15], "Europe & C. Asia":[40,46]
