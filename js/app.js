@@ -355,6 +355,89 @@ function renderSectors(){
   }));
 }
 
+/* ---------- Home (landing overview) ---------- */
+function homeTopCounts(rows,keyFn,n){ const m={};
+  rows.forEach(p=>{ const k=keyFn(p); if(!k)return; (m[k]||(m[k]={k:k,n:0,p:p})).n++; });
+  return Object.keys(m).map(k=>m[k]).sort((a,b)=>b.n-a.n).slice(0,n);
+}
+function homeFlagIcon(cc,name){ const fi=flagImg(cc,name);
+  return fi ? "<span class='hr-ic flag'>"+fi+"</span>" : "<span class='hr-ic code'>"+esc((cc||"?").toUpperCase())+"</span>"; }
+function homeMono(name,color){ const nm=(name||"?").replace(/[^A-Za-z ]/g," ").trim();
+  const ini=((nm.split(/\s+/).filter(Boolean).slice(0,2).map(s=>s[0]).join(""))||"?").toUpperCase();
+  return "<span class='hr-ic mono' style='--c:"+(color||"#8A98A3")+"'>"+esc(ini)+"</span>"; }
+function homeRank(items,iconFn,linkType){ const max=Math.max(1,...items.map(d=>d.n));
+  if(!items.length) return "<p class='muted'>—</p>";
+  return "<ol class='hrank'>"+items.map((it,i)=>{ const pct=Math.round(100*it.n/max);
+    return "<li><"+(linkType?"button":"div")+" class='hr-row"+(linkType?" hr-link":"")+"'"+(linkType?" data-link='"+linkType+"' data-val=\""+eatt(it.k)+"\" title='See "+esc(it.k)+" programmes'":"")+">"+
+      "<span class='hr-rank'>"+(i+1)+"</span>"+iconFn(it)+
+      "<span class='hr-name'>"+esc(it.k)+"</span>"+
+      "<span class='hr-bar'><span style='width:"+pct+"%'></span></span>"+
+      "<span class='hr-n'>"+fmtNum(it.n)+"</span></"+(linkType?"button":"div")+"></li>";
+  }).join("")+"</ol>"; }
+function homeTopSectors(){
+  return SECTOR_CARDS.map(s=>({s,n:PROGRAMS.filter(p=>p.sc&&typeof guideTheme==="function"&&s.themes.includes(guideTheme(p.sc))).length}))
+    .sort((a,b)=>b.n-a.n).slice(0,4).map(({s,n})=>
+      "<button class='hsec' data-key='"+s.key+"' style='--c:"+s.color+"'>"+
+        "<span class='hsec-img'><img src='assets/sectors/"+s.key+"."+(s.ext||"jpg")+"' alt='"+eatt(s.title)+"' loading='lazy'><span class='hsec-ic'>"+s.icon+"</span></span>"+
+        "<span class='hsec-b'><span class='hsec-t'>"+esc(s.title)+"</span><span class='hsec-n'>"+fmtNum(n)+" programmes</span></span></button>").join("");
+}
+function renderHome(){
+  const el=document.getElementById("home"); if(!el) return;
+  const live=PROGRAMS.filter(p=>!p._agg);
+  const recv=homeTopCounts(live,p=>p.co,5);
+  const give=homeTopCounts(live.filter(p=>p.pcc&&p.pn),p=>p.pn,5);
+  const ents=homeTopCounts(live,p=>i18n(p.fn||p.r),5);
+  // "Latest" = most recently started that have actually started — exclude future-dated
+  // pipeline activities (some plan starts years out) so the list reads as genuinely recent.
+  const today=new Date().toISOString().slice(0,10);
+  const latest=live.filter(p=>p.st&&p.st<=today).sort((a,b)=>(a.st<b.st?1:a.st>b.st?-1:0)).slice(0,10);
+  const ncountry=new Set(live.map(p=>p.co)).size;
+  el.innerHTML=
+    "<div class='home-hero'><div class='hh-tx'>"+
+      "<h1>Welcome to Benchmark DB</h1>"+
+      "<p class='hh-lead'>A design reference of <b>"+fmtNum(PROGRAMS.length)+" real, comparable aid programmes</b> from the IATI Standard — so you can scope a new programme against what comparable work actually costs, how long it runs, and how often it reports results. Every figure is reported or derived; none is fabricated.</p>"+
+      "<div class='hh-act'><button class='btn hh-plan' data-home-nav='plan'>◎ Plan a programme →</button>"+
+        "<button class='btn ghost' data-home-nav='programmes'>Browse all programmes</button>"+
+        "<button class='btn ghost' data-home-nav='benchmarks'>See benchmarks</button></div>"+
+      "<p class='hh-meta'><span><b>"+fmtNum(PROGRAMS.length)+"</b> programmes</span><span><b>"+fmtNum(ncountry)+"</b> recipient countries</span><span><b>"+fmtNum(SECTORS.length)+"</b> sectors</span><span><b>"+DONORS.length+"</b> donor types</span></p>"+
+    "</div></div>"+
+    "<section class='home-sec'><div class='hs-head'><h2>Top focus areas</h2><button class='hlink' data-home-nav='sectors'>All sectors →</button></div>"+
+      "<div class='hsecs'>"+homeTopSectors()+"</div></section>"+
+    "<div class='home-cols3'>"+
+      "<section class='home-sec'><h3>Top receiving countries</h3>"+homeRank(recv,it=>homeFlagIcon(it.p.cc,it.k),"country")+"</section>"+
+      "<section class='home-sec'><h3>Top donor countries</h3>"+homeRank(give,it=>homeFlagIcon(it.p.pcc,it.k),"prov")+"</section>"+
+      "<section class='home-sec'><h3>Top funding organisations</h3>"+homeRank(ents,it=>homeMono(it.k,DONOR_COLORS[it.p.d]),"entity")+"</section>"+
+    "</div>"+
+    "<div class='home-cols2'>"+
+      "<section class='home-sec'><div class='hs-head'><h2>Latest programmes</h2><button class='hlink' data-home-nav='programmes'>All programmes →</button></div>"+
+        "<div class='hprogs'>"+latest.map(p=>"<button class='hprog' data-i='"+p._i+"'>"+cyProgIcon(p)+
+          "<span class='hprog-tx'><span class='hprog-n'>"+esc(pName(p))+"</span><span class='hprog-m'>"+esc(p.sn)+" · "+esc(p.co)+" · "+fmtCompact(p._usd)+" · "+esc(p.st||"—")+"</span></span></button>").join("")+"</div></section>"+
+      "<section class='home-sec home-faq'><h3>How to use this database</h3>"+
+        "<p class='faq-intro'>Benchmark DB turns thousands of published aid activities into <b>reference values</b> for designing a new programme — it is a design aid, <b>not</b> a scoreboard or a ranking of organisations.</p>"+
+        "<details open><summary>What does it actually do?</summary><p>It gathers real programmes from the IATI Standard (developing countries, started in the last 5 years or still running) and computes <b>typical</b> budget, duration and results-reporting rates for any peer group you choose — by sector, donor type, region or funder. You compare your draft design against those typical values.</p></details>"+
+        "<details><summary>How do I start?</summary><p>Click <b>Plan a programme</b>, pick your country, sector and funder, and the planner shows the typical budget, duration and reach of comparable programmes — then place your own numbers against them. Or explore first: <b>Sectors</b> and <b>Benchmarks</b> for typical values, <b>Programmes</b> to search the evidence base, <b>Countries</b> for a per-country profile.</p></details>"+
+        "<details><summary>Can I trust the numbers?</summary><p>Every figure is tagged <b>REPORTED</b> (straight from IATI) or <b>DERIVED</b> (e.g. duration from dates, ≈USD via FX) — nothing is invented, and gaps are left blank rather than guessed. It is an IATI <i>sample</i>, so treat medians as indicative, not a census. The <b>#read_me</b> tab documents every method and caveat.</p></details>"+
+        "<details><summary>What it is not</summary><p>Not an M&amp;E system, not a measure of impact or value-for-money, and not a way to rank donors or programmes. Cost-per-beneficiary is deliberately omitted because IATI reach figures are non-comparable.</p></details>"+
+      "</section>"+
+    "</div>";
+  el.querySelectorAll("[data-home-nav]").forEach(b=>b.addEventListener("click",()=>{
+    const v=b.getAttribute("data-home-nav"); showView(v);
+    if(v==="plan"&&typeof renderPlanRec==="function"){ renderPlanRec(); renderPlanCalc(); }
+  }));
+  el.querySelectorAll(".hsec").forEach(b=>b.addEventListener("click",()=>{
+    const s=SECTOR_CARDS.find(x=>x.key===b.getAttribute("data-key")); if(!s) return;
+    Object.assign(PS,{q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",cl:s.themes,clLabel:s.title,page:1});
+    reflectControls(); showView("programmes"); renderPrograms();
+  }));
+  el.querySelectorAll(".hr-link").forEach(b=>b.addEventListener("click",()=>{
+    const t=b.getAttribute("data-link"),v=b.getAttribute("data-val");
+    Object.assign(PS,{q:"",d:"",rg:"",co:"",sc:"",sta:"",re:"",prov:"",cl:null,clLabel:"",page:1});
+    if(t==="country")PS.co=v; else if(t==="prov")PS.prov=v; else if(t==="entity")PS.q=v;
+    reflectControls(); showView("programmes"); renderPrograms();
+  }));
+  el.querySelectorAll(".hprog").forEach(b=>b.addEventListener("click",()=>openCard(PROGRAMS[+b.getAttribute("data-i")])));
+}
+
 function dl(name,text){ const b=new Blob([text],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(b),a=document.createElement("a"); a.href=u; a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(u),1500); }
 /* cc (CSV cell) — see js/lib.js */
 function exportPrograms(){ const rows=sortRows(filterPrograms(),PS.sort,PS.dir);
@@ -849,6 +932,7 @@ function showView(name){
   document.querySelectorAll(".nav-item").forEach(b=>b.classList.toggle("active",b.dataset.view===name));
   if(name==="charts") renderCharts();
   if(name==="sectors") renderSectors();
+  if(name==="home") renderHome();
   syncURL();
 }
 function setTheme(t){ document.documentElement.setAttribute("data-theme",t);
@@ -915,7 +999,9 @@ function route(){
   }
   reflectControls();
   renderPrograms(); renderOutcomes(); renderCountry();
-  showView((view&&document.getElementById("view-"+view))?view:"programmes");
+  let dest=(view&&document.getElementById("view-"+view))?view:"home";
+  if(!view){ const pf=["q","donor","region","country","sector","status","results","provider"].some(k=>qp.has(k)); if(pf) dest="programmes"; }
+  showView(dest);
 }
 
 /* ---------- Charts (zero-dependency SVG) ---------- */
@@ -1238,7 +1324,7 @@ function init(){ try {
     const use=e.target.closest&&e.target.closest(".pl-use-proj"); if(use){ seedFromProject(PROGRAMS[+use.getAttribute("data-i")]); return; }
     const info=e.target.closest&&e.target.closest(".pcomp-info[data-i]"); if(info) openCard(PROGRAMS[+info.getAttribute("data-i")]); });
 
-  setTheme("light"); renderMeta(); buildFX(); renderUniverse(); renderDQ(); renderSectors(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
+  setTheme("light"); renderMeta(); buildFX(); renderUniverse(); renderDQ(); renderHome(); renderSectors(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
   route(); URL_READY=true; syncURL();
   } catch(err){
     if(typeof console!=="undefined"&&console.error) console.error("Benchmark DB init failed:",err);
