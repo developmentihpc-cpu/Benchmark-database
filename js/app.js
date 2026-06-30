@@ -392,8 +392,8 @@ function homeRank(items,iconFn,linkType){ const max=Math.max(1,...items.map(d=>d
     return "<li><"+(linkType?"button":"div")+" class='hr-row"+(linkType?" hr-link":"")+"'"+(linkType?" data-link='"+linkType+"' data-val=\""+eatt(it.k)+"\" title='See "+esc(it.k)+" programmes'":"")+">"+
       "<span class='hr-rank'>"+(i+1)+"</span>"+iconFn(it)+
       "<span class='hr-name'>"+esc(it.k)+"</span>"+
-      "<span class='hr-bar'><span style='width:"+pct+"%'></span></span>"+
-      "<span class='hr-n'>"+fmtNum(it.n)+"</span></"+(linkType?"button":"div")+"></li>";
+      "<span class='hr-n'>"+fmtNum(it.n)+"</span>"+
+      "<span class='hr-bar'><span style='width:"+pct+"%'></span></span></"+(linkType?"button":"div")+"></li>";
   }).join("")+"</ol>"; }
 function homeTopSectors(){
   return SECTOR_CARDS.map(s=>({s,n:PROGRAMS.filter(p=>p.sc&&typeof guideTheme==="function"&&s.themes.includes(guideTheme(p.sc))).length}))
