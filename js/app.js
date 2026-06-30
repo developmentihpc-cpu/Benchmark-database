@@ -938,13 +938,28 @@ function svgHBars(data,o){ o=o||{}; const W=o.w||540,rowH=27,pL=132,pR=58,pT=6,H
   });
   return "<svg viewBox='0 0 "+W+" "+H+"' class='chart' preserveAspectRatio='xMidYMid meet'>"+s+"</svg>";
 }
+/* Round up to a "nice" axis ceiling: 1/2/5 × 10ⁿ (e.g. 167 → 200). */
+function niceCeil(v){ if(!(v>0))return 1; const e=Math.pow(10,Math.floor(Math.log10(v))),m=v/e; return (m<=1?1:m<=2?2:m<=5?5:10)*e; }
 function svgScatter(pts,o){ o=o||{}; const W=o.w||540,H=o.h||250,pL=46,pR=12,pT=10,pB=34,iw=W-pL-pR,ih=H-pT-pB;
   const xs=pts.map(p=>p.x).filter(v=>v>0); if(!xs.length) return "<svg viewBox='0 0 "+W+" "+H+"' class='chart'></svg>";
-  const xmin=Math.log10(Math.min(...xs)),xmax=Math.log10(Math.max(...xs)),ymax=Math.max(1,...pts.map(p=>p.y)),span=(xmax-xmin)||1; let g="",c="";
+  const ys=pts.map(p=>p.y).filter(v=>v>0);
+  const sx=xs.slice().sort((a,b)=>a-b), sy=ys.slice().sort((a,b)=>a-b);
+  const pc=(arr,f)=>arr[Math.max(0,Math.min(arr.length-1,Math.floor(f*(arr.length-1))))];
+  // Robust domains so a few erroneous micro-budgets / multi-decade durations don't
+  // stretch the axes into empty space. X (log $): floor the low end ~1 decade below
+  // the 1st percentile. Y (linear months): cap near the 99th percentile, rounded up.
+  let xmin=Math.log10(Math.min(...xs)); const xmax=Math.log10(Math.max(...xs));
+  xmin=Math.max(xmin, Math.floor(Math.log10(pc(sx,0.01)))-1);
+  const span=(xmax-xmin)||1, ymax=niceCeil(Math.max(1,pc(sy,0.99)));
+  let g="",c="",clamped=0;
   for(let e=Math.ceil(xmin);e<=Math.floor(xmax);e++){const px=pL+iw*((e-xmin)/span); g+="<line class='cg' x1='"+px.toFixed(1)+"' y1='"+pT+"' x2='"+px.toFixed(1)+"' y2='"+(pT+ih)+"'/><text class='cx' x='"+px.toFixed(1)+"' y='"+(H-pB+14)+"' text-anchor='middle'>"+fmtCompact(Math.pow(10,e))+"</text>";}
   for(let i=0;i<=4;i++){const y=pT+ih*(1-i/4); g+="<line class='cg' x1='"+pL+"' y1='"+y.toFixed(1)+"' x2='"+(W-pR)+"' y2='"+y.toFixed(1)+"'/><text class='ct' x='"+(pL-5)+"' y='"+(y+3).toFixed(1)+"' text-anchor='end'>"+Math.round(ymax*i/4)+"</text>";}
-  pts.forEach(p=>{ if(!(p.x>0))return; const px=pL+iw*((Math.log10(p.x)-xmin)/span),py=pT+ih*(1-Math.min(1,p.y/ymax)); c+="<circle class='cpt' cx='"+px.toFixed(1)+"' cy='"+py.toFixed(1)+"' r='2.4'><title>"+esc(p.t||"")+"</title></circle>"; });
-  return "<svg viewBox='0 0 "+W+" "+H+"' class='chart' preserveAspectRatio='xMidYMid meet'>"+g+c+"</svg>";
+  pts.forEach(p=>{ if(!(p.x>0))return; const lx=Math.log10(p.x);
+    const fx=(lx-xmin)/span, fy=p.y/ymax; if(fx<0||fy>1)clamped++;
+    const px=pL+iw*Math.max(0,Math.min(1,fx)),py=pT+ih*(1-Math.max(0,Math.min(1,fy)));
+    c+="<circle class='cpt' cx='"+px.toFixed(1)+"' cy='"+py.toFixed(1)+"' r='2.4'><title>"+esc(p.t||"")+"</title></circle>"; });
+  const note=clamped?"<text class='cx' x='"+(W-pR)+"' y='"+(pT+10)+"' text-anchor='end' opacity='.75'>"+clamped+" outlier"+(clamped>1?"s":"")+" clamped to edge</text>":"";
+  return "<svg viewBox='0 0 "+W+" "+H+"' class='chart' preserveAspectRatio='xMidYMid meet'>"+g+c+note+"</svg>";
 }
 function chartCard(t,s,svg,note){ return "<div class='chartcard'><h3>"+esc(t)+"</h3><p class='csub'>"+esc(s)+"</p>"+svg+(note?"<p class='cnote-chart'>"+esc(note)+"</p>":"")+"</div>"; }
 const CS={sc:"",rg:"",d:""};
