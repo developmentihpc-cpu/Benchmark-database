@@ -61,7 +61,7 @@ function fillSelect(id,vals,label){ const el=document.getElementById(id); if(!el
  * the raw fn/r variants that fold into it. Raw data is untouched; this only affects
  * how funders are grouped and displayed. */
 const FUNDER_GROUPS={
- "World Bank":["International Development Association","International Bank for Reconstruction and Development","World Bank Trust Funds","Intl Dev Association (IDA)"],
+ "International Development Association":["Intl Dev Association (IDA)"],
  "UNICEF":["UNITED NATIONS CHILDREN'S FUND","United Nations Children's Fund (UNICEF)","UNICEF United Nations Children'sFund"],
  "United Nations Development Programme":["UNITED NATIONS DEVELOPMENT PROGRAMME","UNDP-Guinea Bissau"],
  "United Nations Population Fund":["UNITED NATIONS POPULATION FUND","United Nations Population Fund (UNFPA)","UNFPA-HQ"],
@@ -71,7 +71,8 @@ const FUNDER_GROUPS={
  "United Nations Office for the Coordination of Humanitarian Affairs":["UNITED NATIONS OFFICE FOR THE COORDINATION OF HUMA","OCHA"],
  "United Nations High Commissioner for Refugees (UNHCR)":["UN HIGH COMMISSIONER FOR REFUGEES (UNHCR)","UNITED NATIONS HIGH COMMISSION REFUGEES"],
  "UN Environment Programme":["United Nations Environment Programme (UNEP)"],
- "Foreign, Commonwealth and Development Office (FCDO)":["UK - Foreign, Commonwealth Development Office (FCDO)","UK - Foreign, Commonwealth and Development Office","Foreign, Commonwealth & Development Office","Foreign, Commonwealth & Development Office (FC","Foreign,Commonwealth & Dev.Off.","DFID","DfID - Department for International Development UK","UK - Department for International Development (DFID)"],
+ "Foreign, Commonwealth and Development Office (FCDO)":["UK - Foreign, Commonwealth Development Office (FCDO)","UK - Foreign, Commonwealth and Development Office","Foreign, Commonwealth & Development Office","Foreign, Commonwealth & Development Office (FC","Foreign,Commonwealth & Dev.Off."],
+ "DFID":["DfID - Department for International Development UK","UK - Department for International Development (DFID)"],
  "U.S. Agency for International Development":["United States Agency for International Development","USAID (United States Agency for International Development)"],
  "Federal Ministry for Economic Cooperation and Development (BMZ)":["Bundesministerium für wirtschaftliche Zusammenarbeit und Entwicklung (BMZ)"],
  "Agence Française de Développement (AFD)":["AFD","French Development Agency","French Development Agency (Agence Française de Développement)","French Development Agency (AFD), France"],
