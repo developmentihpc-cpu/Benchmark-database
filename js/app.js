@@ -55,8 +55,47 @@ const OS={q:"",s:"",sn:"",t:"",prog:"",sort:"_ach",dir:-1,page:1,size:50};
 
 function uniq(arr,key){ return [...new Set(arr.map(x=>x[key]).filter(Boolean))].sort(); }
 function fillSelect(id,vals,label){ const el=document.getElementById(id); if(!el) return; el.innerHTML="<option value=''>"+label+"</option>"+vals.map(v=>"<option>"+esc(v)+"</option>").join(""); }
-/* The funding organisation for a programme (named funder if any, else the reporter). */
-function funderName(p){ return (i18n(p.fn||p.r)||"").trim(); }
+/* Canonical funder groups — merge variant spellings / acronyms / languages / legal
+ * suffixes of the SAME funding organisation. Distinct national affiliates and UNICEF
+ * national committees are deliberately kept separate. Keys = canonical name; values =
+ * the raw fn/r variants that fold into it. Raw data is untouched; this only affects
+ * how funders are grouped and displayed. */
+const FUNDER_GROUPS={
+ "World Bank":["International Development Association","International Bank for Reconstruction and Development","World Bank Trust Funds","Intl Dev Association (IDA)"],
+ "UNICEF":["UNITED NATIONS CHILDREN'S FUND","United Nations Children's Fund (UNICEF)","UNICEF United Nations Children'sFund"],
+ "United Nations Development Programme":["UNITED NATIONS DEVELOPMENT PROGRAMME","UNDP-Guinea Bissau"],
+ "United Nations Population Fund":["UNITED NATIONS POPULATION FUND","United Nations Population Fund (UNFPA)","UNFPA-HQ"],
+ "World Food Programme":["WORLD FOOD PROGRAMME","World Food Programme Administered Trust Fund"],
+ "World Health Organization":["World Health Organization (WHO)"],
+ "United Nations Office for Project Services":["United Nations Office for Project Services (UNOPS)","United Nation Office for Project Services (UNOPS)","UNOPS-HQ"],
+ "United Nations Office for the Coordination of Humanitarian Affairs":["UNITED NATIONS OFFICE FOR THE COORDINATION OF HUMA","OCHA"],
+ "United Nations High Commissioner for Refugees (UNHCR)":["UN HIGH COMMISSIONER FOR REFUGEES (UNHCR)","UNITED NATIONS HIGH COMMISSION REFUGEES"],
+ "UN Environment Programme":["United Nations Environment Programme (UNEP)"],
+ "Foreign, Commonwealth and Development Office (FCDO)":["UK - Foreign, Commonwealth Development Office (FCDO)","UK - Foreign, Commonwealth and Development Office","Foreign, Commonwealth & Development Office","Foreign, Commonwealth & Development Office (FC","Foreign,Commonwealth & Dev.Off.","DFID","DfID - Department for International Development UK","UK - Department for International Development (DFID)"],
+ "U.S. Agency for International Development":["United States Agency for International Development","USAID (United States Agency for International Development)"],
+ "Federal Ministry for Economic Cooperation and Development (BMZ)":["Bundesministerium für wirtschaftliche Zusammenarbeit und Entwicklung (BMZ)"],
+ "Agence Française de Développement (AFD)":["AFD","French Development Agency","French Development Agency (Agence Française de Développement)","French Development Agency (AFD), France"],
+ "Japan International Cooperation Agency (JICA)":["Japan International Cooperation Agency","Japan - International Cooperation Agency (JICA)"],
+ "Korea International Cooperation Agency (KOICA)":["KOREA INTERN. COOPERATION AGENCY","Republic of Korea - International Cooperation Agency (KOICA)"],
+ "Inter-American Development Bank":["INTER AMERICAN DEVELOPMENT BANK"],
+ "African Development Bank":["AFRICAN DEVELOPMENT BANK"],
+ "Bill & Melinda Gates Foundation":["Gates Foundation"],
+ "Swedish International Development Cooperation Agency (Sida)":["Sida – Swedish International Development Cooperati"],
+ "Belgian Development Cooperation":["Belgium Development Cooperation","BELGIAN DEVELOPMENT COOPERATION"],
+ "Enabel (Belgian development agency)":["Belgian agency for international cooperation (Enabel)","Belgian development agency (Enabel)"],
+ "European Commission":["EUROPEAN COMMISSION","EC","Commission of the European Communities","EU-Commission of the European Communities","European Union","European Union Delegation to Afghanistan"],
+ "European Commission - DG International Partnerships":["European Commission - Directorate-General for International Partnerships","Directorate-General for International Partnerships"],
+ "European Commission - DG ECHO":["Directorate-General for European Civil Protection","European Commission - Humanitarian Aid & Civil Pro"],
+ "Save the Children UK":["Save The Children UK"],
+ "Oxfam Australia":["OXFAM Australia"],
+ "PricewaterhouseCoopers (PwC)":["PricewaterhouseCoopers Private Limited","PricewaterhouseCoopers LLP","PwC"],
+ "Ministry of Foreign Affairs of Japan":["MINISTRY OF FOREIGN AFFAIRS IN JAPAN","Japan - Ministry of Foreign Affairs"]
+};
+const FUNDER_CANON={}; for(const c in FUNDER_GROUPS){ FUNDER_GROUPS[c].forEach(v=>{FUNDER_CANON[v]=c;}); }
+function canonFunder(name){ return FUNDER_CANON[name]||name; }
+/* The funding organisation for a programme (named funder if any, else the reporter),
+ * canonicalised so variant spellings of the same org collapse to one. */
+function funderName(p){ return (i18n(canonFunder((p.fn||p.r||"").trim()))||"").trim(); }
 /* Bilateral donors are countries; every other donor type is an organisation. */
 function isOrgDonor(d){ return !!d && d!=="Bilateral"; }
 /* The second donor filter is dual-purpose: a "Donor country" picker for bilateral/any,
@@ -407,7 +446,7 @@ function renderHome(){
   const live=PROGRAMS.filter(p=>!p._agg);
   const recv=homeTopCounts(live,p=>p.co,5);
   const give=homeTopCounts(live.filter(p=>p.pcc&&p.pn),p=>p.pn,5);
-  const ents=homeTopCounts(live,p=>i18n(p.fn||p.r),5);
+  const ents=homeTopCounts(live,funderName,5);
   // "Latest" = most recently started that have actually started — exclude future-dated
   // pipeline activities (some plan starts years out) so the list reads as genuinely recent.
   const today=new Date().toISOString().slice(0,10);
