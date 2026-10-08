@@ -16,7 +16,7 @@
 <meta name="twitter:description" content="Real comparable aid programmes from IATI: median budgets, durations and reporting rates by sector, donor type and region.">
 <meta name="twitter:image" content="https://developmentihpc-cpu.github.io/Benchmark-database/assets/og.svg">
 <link rel="stylesheet" href="css/fonts.css">
-<link rel="stylesheet" href="css/styles.css?v=23">
+<link rel="stylesheet" href="css/styles.css?v=24">
 </head>
 <body><div class="app">
 <noscript><div style="max-width:560px;margin:14vh auto;padding:28px;text-align:center;font-family:Georgia,serif;color:#33424f">
@@ -37,6 +37,7 @@
   <button class="nav-item" data-view="charts"><svg class="ico" viewBox="0 0 16 16"><path d="M2 2v12h12"/><path d="M4.5 11.5l3-3 2 2 3.5-4"/></svg><span>Charts</span></button>
   <button class="nav-item" data-view="countries"><svg class="ico" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6"/><path d="M2 8h12M8 2c2 2 2 10 0 12M8 2c-2 2-2 10 0 12"/></svg><span>Countries</span></button>
   <button class="nav-item" data-view="plan"><svg class="ico" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.4"/><circle cx="8" cy="8" r="1.5"/><path d="M8 .9v2.2M8 12.9v2.2M.9 8h2.2M12.9 8h2.2"/></svg><span>Plan a programme</span></button>
+  <button class="nav-item" data-view="myprojects"><svg class="ico" viewBox="0 0 16 16"><path d="M2 4.3A1.3 1.3 0 0 1 3.3 3h2.9l1.3 1.8h5.2A1.3 1.3 0 0 1 14 6.1v6.6A1.3 1.3 0 0 1 12.7 14H3.3A1.3 1.3 0 0 1 2 12.7Z"/><path d="M4.8 10h6.4M4.8 11.7h4.2"/></svg><span>My Projects</span></button>
   <button class="nav-item" data-view="outcomes"><svg class="ico" viewBox="0 0 16 16"><path d="M5.5 4h8.5M5.5 8h8.5M5.5 12h8.5M2.3 4h.01M2.3 8h.01M2.3 12h.01"/></svg><span>Reported outcomes</span><b class="badge" id="badge-out">0</b></button>
   <button class="nav-item" data-view="readme"><svg class="ico" viewBox="0 0 16 16"><path d="M6.2 2.5 4.4 13.5M11.6 2.5 9.8 13.5M3.2 6h10M2.6 10h10"/></svg><span>#read_me</span></button>
  </nav>
@@ -155,6 +156,13 @@
   </div>
  </section>
 
+ <section id="view-myprojects" class="view">
+  <header class="topbar"><div class="tb-title"><h1>My Projects</h1><p>Add your own programmes — budget, timeline, reach and live progress — and see each one benchmarked against comparable IATI programmes. Saved in this browser; export any time to back up or share.</p></div>
+   <div class="tb-actions"><button id="mp-import" class="btn ghost">⤒ Import</button><button id="mp-export-csv" class="btn ghost">⤓ CSV</button><button id="mp-export" class="btn ghost">⤓ JSON</button><button id="mp-add" class="btn">+ Add project</button></div></header>
+  <div id="myprojects" class="myprojects"></div>
+  <input id="mp-file" type="file" accept="application/json,.json" hidden>
+ </section>
+
  <section id="view-outcomes" class="view">
   <header class="topbar"><div class="tb-title"><h1>Reported outcomes</h1><p>Real indicator-level baseline → target → actual values pulled from IATI.</p></div>
    <div class="tb-actions"><button id="o-export" class="btn">⤓ Export CSV</button></div></header>
@@ -233,8 +241,8 @@
 <div id="pl-brief" class="pl-brief" aria-hidden="true"></div>
 <script src="js/lib.js"></script>
 <script src="js/i18n.js"></script>
-<script src="js/geo.js?v=23"></script>
-<script src="js/guide.js?v=23"></script>
-<script src="js/data.js?v=23"></script>
-<script src="js/app.js?v=23"></script>
+<script src="js/geo.js?v=24"></script>
+<script src="js/guide.js?v=24"></script>
+<script src="js/data.js?v=24"></script>
+<script src="js/app.js?v=24"></script>
 </body></html>

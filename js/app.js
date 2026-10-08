@@ -987,6 +987,126 @@ function openOutcomesFor(name){
   showView("outcomes");           // toggles view + syncURL
   reflectControls(); renderOutcomes();
 }
+/* ---------- My Projects — your own programmes, tracked + benchmarked (localStorage) ---------- */
+const MP_STATUS=["Planning","Active","On hold","Completed","Cancelled"];
+const CC_BY_NAME=(function(){ const m={}; PROGRAMS.forEach(p=>{ if(p.co&&p.cc&&!m[p.co]) m[p.co]=p.cc; }); return m; })();
+let MP=[];           // the user's projects
+let MP_EDIT=null;    // null = list only; {} = add form; a project = edit form
+function loadMP(){ try{ MP=JSON.parse(localStorage.getItem("bdb_myprojects")||"[]")||[]; }catch(e){ MP=[]; } if(!Array.isArray(MP)) MP=[]; }
+function saveMP(){ try{ localStorage.setItem("bdb_myprojects",JSON.stringify(MP)); }catch(e){} }
+function mpUID(){ return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function mpToday(){ return new Date().toISOString().slice(0,10); }
+function mpMonths(st,en){ if(!st||!en) return null; const a=new Date(st),b=new Date(en); if(isNaN(a)||isNaN(b)) return null; const d=(b-a)/(1000*60*60*24*30.44); return d>0?Math.round(d):null; }
+function mpElapsed(st,en){ if(!st||!en) return null; const a=new Date(st),b=new Date(en),now=new Date(); if(isNaN(a)||isNaN(b)||b<=a) return null; return Math.max(0,Math.min(100,Math.round(100*(now-a)/(b-a)))); }
+/* progress: explicit % if set, else spend/budget, else time-elapsed */
+function mpProgress(p){
+  if(p.pct!=null&&p.pct!=="") return Math.max(0,Math.min(100,Math.round(+p.pct)));
+  if(p.budget&&p.spend!=null&&p.spend!=="") return Math.max(0,Math.min(100,Math.round(100*(+p.spend)/(+p.budget))));
+  return mpElapsed(p.start,p.end);
+}
+/* benchmark cohort = comparable IATI programmes in the project's sector */
+function mpBench(p){ if(!p.sn) return null;
+  const rows=PROGRAMS.filter(x=>!x._agg&&x.sn===p.sn&&x._usd!=null); if(!rows.length) return null;
+  return {n:rows.length, b:statsOf(rows,"_usd"), d:statsOf(rows.filter(x=>x._dur!=null),"_dur")};
+}
+function renderMyProjects(){
+  const el=document.getElementById("myprojects"); if(!el) return;
+  let h="";
+  if(MP_EDIT) h+=mpForm(MP_EDIT);
+  if(MP.length){
+    const tot=MP.reduce((s,p)=>s+(+p.budget||0),0);
+    const avg=Math.round(MP.reduce((s,p)=>s+(mpProgress(p)||0),0)/MP.length);
+    const active=MP.filter(p=>p.status==="Active").length;
+    h+="<div class='mp-summary'><span><b>"+MP.length+"</b> project"+(MP.length>1?"s":"")+"</span><span><b>"+active+"</b> active</span><span><b>"+fmtCompact(tot)+"</b> total budget</span><span><b>"+avg+"%</b> avg progress</span></div>";
+    h+="<div class='mp-grid'>"+MP.map(mpCard).join("")+"</div>";
+  } else if(!MP_EDIT){
+    h+="<div class='mp-empty'><h3>No projects yet</h3><p>Add your organisation’s programmes to track budget, timeline, reach and progress — each one benchmarked live against comparable IATI programmes. Everything is saved in this browser; use <b>Export</b> to back it up or move it to another device.</p><button class='btn mp-big' id='mp-add2'>+ Add your first project</button></div>";
+  }
+  el.innerHTML=h; mpWire(el);
+}
+function mpFig(l,v){ return "<div class='mp-fig'><span class='mp-fig-l'>"+l+"</span><span class='mp-fig-v'>"+v+"</span></div>"; }
+function mpBar(pct,cls){ const w=pct==null?0:Math.max(0,Math.min(100,pct)); return "<div class='mp-bar'><span class='"+cls+"' style='width:"+w+"%'></span></div>"; }
+function mpStatusBadge(s){ s=s||"Planning"; return "<span class='mp-status mp-st-"+s.toLowerCase().replace(/\s+/g,"-")+"'>"+esc(s)+"</span>"; }
+function mpCard(p){
+  const months=mpMonths(p.start,p.end), prog=mpProgress(p);
+  const progSrc=(p.pct!=null&&p.pct!=="")?"reported":(p.budget&&p.spend!=null&&p.spend!=="")?"by spend":(p.start&&p.end)?"by timeline":"—";
+  const fi=p.cc?flagImg(p.cc,p.co):"", budget=+p.budget||null, bench=mpBench(p);
+  let benchHtml="";
+  if(bench&&bench.b.med!=null&&budget!=null){
+    const diff=Math.round(100*(budget-bench.b.med)/bench.b.med), pr=Math.round(pctRank(bench.b.arr,budget)*100);
+    benchHtml="<div class='mp-bench'><span class='mp-bench-l'>Budget vs "+bench.n+" comparable "+esc(p.sn)+" programmes</span>"+
+      "<span class='mp-bench-v'>"+ord(pr)+" percentile · <span class='"+(Math.abs(diff)>=50?"mp-out":"mp-ok")+"'>"+(diff>0?"+":"")+diff+"% vs median</span> <span class='muted'>(median "+fmtCompact(bench.b.med)+")</span></span></div>";
+  } else if(p.sn){ benchHtml="<div class='mp-bench muted'>No comparable benchmark for "+esc(p.sn)+" in the sample.</div>"; }
+  const spendPct=(p.budget&&p.spend!=null&&p.spend!=="")?Math.min(100,Math.round(100*(+p.spend)/(+p.budget))):null;
+  const reachPct=(p.target&&p.actual!=null&&p.actual!=="")?Math.min(100,Math.round(100*(+p.actual)/(+p.target))):null;
+  const metaBits=[p.d?chip(p.d):"", p.fn?"<span class='mp-fn'>"+esc(p.fn)+"</span>":"", p.sn?"<span class='mp-sec'>"+esc(p.sn)+"</span>":""].filter(Boolean).join("");
+  return "<div class='mp-card' data-id='"+eatt(p.id)+"'>"+
+    "<div class='mp-card-h'>"+(fi?"<span class='mp-flag'>"+fi+"</span>":"")+
+      "<div class='mp-tt'><div class='mp-name'>"+esc(p.name||"(untitled)")+"</div>"+
+      "<div class='mp-sub'>"+[p.co?esc(p.co):"",months?months+" mo":"",p.start?esc(p.start)+(p.end?" → "+esc(p.end):""):""].filter(Boolean).join(" · ")+"</div></div>"+
+      mpStatusBadge(p.status)+"</div>"+
+    (metaBits?"<div class='mp-meta'>"+metaBits+"</div>":"")+
+    "<div class='mp-figs'>"+mpFig("Budget",budget==null?"—":fmtCompact(budget))+mpFig("Spent",(p.spend==null||p.spend==="")?"—":fmtCompact(+p.spend))+
+      mpFig("Target reach",p.target?fmtNum(+p.target):"—")+mpFig("Reached",(p.actual==null||p.actual==="")?"—":fmtNum(+p.actual))+"</div>"+
+    "<div class='mp-prog'><div class='mp-prog-h'><span>Progress</span><span class='mp-prog-pct'>"+(prog==null?"—":prog+"%")+(progSrc!=="—"?" <span class='muted'>("+progSrc+")</span>":"")+"</span></div>"+mpBar(prog,"mp-bar-prog")+"</div>"+
+    (spendPct!=null?"<div class='mp-prog'><div class='mp-prog-h'><span>Budget spent</span><span class='mp-prog-pct'>"+spendPct+"%</span></div>"+mpBar(spendPct,"mp-bar-spend")+"</div>":"")+
+    (reachPct!=null?"<div class='mp-prog'><div class='mp-prog-h'><span>Reach</span><span class='mp-prog-pct'>"+reachPct+"% of target</span></div>"+mpBar(reachPct,"mp-bar-reach")+"</div>":"")+
+    benchHtml+(p.notes?"<div class='mp-notes'>"+esc(p.notes)+"</div>":"")+
+    "<div class='mp-actions'><button class='mp-edit' data-id='"+eatt(p.id)+"'>Edit</button><button class='mp-del' data-id='"+eatt(p.id)+"'>Delete</button></div>"+
+  "</div>";
+}
+function mpForm(p){
+  const v=k=>p[k]==null?"":eatt(String(p[k]));
+  const opt=(arr,sel,ph)=>"<option value=''>"+esc(ph||"—")+"</option>"+arr.map(x=>"<option"+(x===sel?" selected":"")+">"+esc(x)+"</option>").join("");
+  return "<div class='mp-form'><div class='mp-form-h'>"+(p.id?"Edit project":"Add project")+"</div><div class='mp-fgrid'>"+
+    "<label class='mp-l mp-l-wide'>Project name<input id='mpf-name' value=\""+v("name")+"\" placeholder='e.g. Northern Kenya WASH scale-up'></label>"+
+    "<label class='mp-l'>Country<select id='mpf-co'>"+opt(ALL_COUNTRIES,p.co,"—")+"</select></label>"+
+    "<label class='mp-l'>Sector<select id='mpf-sn'>"+opt(SECTORS,p.sn,"— (needed to benchmark)")+"</select></label>"+
+    "<label class='mp-l'>Donor type<select id='mpf-d'>"+opt(DONORS,p.d,"—")+"</select></label>"+
+    "<label class='mp-l'>Funder / organisation<input id='mpf-fn' value=\""+v("fn")+"\"></label>"+
+    "<label class='mp-l'>Budget (USD)<input id='mpf-budget' type='number' min='0' value=\""+v("budget")+"\"></label>"+
+    "<label class='mp-l'>Spent to date (USD)<input id='mpf-spend' type='number' min='0' value=\""+v("spend")+"\"></label>"+
+    "<label class='mp-l'>Start date<input id='mpf-start' type='date' value=\""+v("start")+"\"></label>"+
+    "<label class='mp-l'>End date<input id='mpf-end' type='date' value=\""+v("end")+"\"></label>"+
+    "<label class='mp-l'>Target reach (people)<input id='mpf-target' type='number' min='0' value=\""+v("target")+"\"></label>"+
+    "<label class='mp-l'>Reached to date (people)<input id='mpf-actual' type='number' min='0' value=\""+v("actual")+"\"></label>"+
+    "<label class='mp-l'>Status<select id='mpf-status'>"+opt(MP_STATUS,p.status||"Planning","")+"</select></label>"+
+    "<label class='mp-l'>Progress %<input id='mpf-pct' type='number' min='0' max='100' placeholder='auto (spend / timeline)' value=\""+v("pct")+"\"></label>"+
+    "<label class='mp-l mp-l-wide'>Notes<textarea id='mpf-notes' rows='2' placeholder='milestones, risks, latest update…'>"+(p.notes==null?"":esc(String(p.notes)))+"</textarea></label>"+
+   "</div><div class='mp-form-a'><button class='btn' id='mpf-save'>"+(p.id?"Save changes":"Add project")+"</button><button class='btn ghost' id='mpf-cancel'>Cancel</button></div></div>";
+}
+function mpReadForm(){
+  const g=id=>{const el=document.getElementById(id); return el?el.value.trim():"";};
+  const co=g("mpf-co");
+  return { name:g("mpf-name"), co:co, cc:CC_BY_NAME[co]||"", sn:g("mpf-sn"), d:g("mpf-d"), fn:g("mpf-fn"),
+    budget:g("mpf-budget"), spend:g("mpf-spend"), start:g("mpf-start"), end:g("mpf-end"),
+    target:g("mpf-target"), actual:g("mpf-actual"), status:g("mpf-status")||"Planning", pct:g("mpf-pct"), notes:g("mpf-notes") };
+}
+function mpWire(el){
+  const a=el.querySelector("#mp-add2"); if(a) a.addEventListener("click",()=>{ MP_EDIT={}; renderMyProjects(); });
+  const save=el.querySelector("#mpf-save"); if(save) save.addEventListener("click",()=>{
+    const d=mpReadForm(); if(!d.name){ const n=document.getElementById("mpf-name"); if(n){n.focus();n.classList.add("mp-err");} return; }
+    if(MP_EDIT&&MP_EDIT.id){ const i=MP.findIndex(x=>x.id===MP_EDIT.id); if(i>=0) MP[i]=Object.assign({},MP[i],d,{updated:mpToday()}); }
+    else MP.unshift(Object.assign({id:mpUID(),updated:mpToday()},d));
+    MP_EDIT=null; saveMP(); renderMyProjects();
+  });
+  const cancel=el.querySelector("#mpf-cancel"); if(cancel) cancel.addEventListener("click",()=>{ MP_EDIT=null; renderMyProjects(); });
+  el.querySelectorAll(".mp-edit").forEach(b=>b.addEventListener("click",()=>{ const p=MP.find(x=>x.id===b.getAttribute("data-id")); if(p){ MP_EDIT=p; renderMyProjects(); window.scrollTo(0,0); } }));
+  el.querySelectorAll(".mp-del").forEach(b=>b.addEventListener("click",()=>{ const id=b.getAttribute("data-id"),p=MP.find(x=>x.id===id);
+    if(p&&confirm("Delete “"+(p.name||"this project")+"”? This can’t be undone.")){ MP=MP.filter(x=>x.id!==id); saveMP(); renderMyProjects(); } }));
+}
+function mpExportJSON(){ dl("my_projects.json",JSON.stringify(MP,null,2)); }
+function mpExportCSV(){
+  const head=["Name","Country","ISO","Sector","Donor type","Funder","Budget USD","Spent USD","Start","End","Duration mo","Target reach","Reached","Status","Progress %","Notes","Updated"];
+  const L=[head.map(cc).join(",")];
+  MP.forEach(p=>L.push([p.name,p.co,p.cc,p.sn,p.d,p.fn,p.budget,p.spend,p.start,p.end,mpMonths(p.start,p.end),p.target,p.actual,p.status,mpProgress(p),p.notes,p.updated].map(cc).join(",")));
+  dl("my_projects.csv",L.join("\n"));
+}
+function mpImport(file){ const r=new FileReader(); r.onload=()=>{ try{ const data=JSON.parse(r.result); if(!Array.isArray(data)) throw 0;
+  const clean=data.filter(x=>x&&typeof x==="object").map(x=>Object.assign({},x,{id:(x.id||mpUID())}));
+  MP=clean.concat(MP.filter(m=>!clean.some(c=>c.id===m.id))); saveMP(); MP_EDIT=null; showView("myprojects"); renderMyProjects();
+  }catch(e){ alert("Couldn’t read that file — expected a my_projects.json export."); } }; r.readAsText(file); }
+
 function showView(name){
   CURRENT_VIEW=name;
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("show",v.id==="view-"+name));
@@ -994,6 +1114,7 @@ function showView(name){
   if(name==="charts") renderCharts();
   if(name==="sectors") renderSectors();
   if(name==="home") renderHome();
+  if(name==="myprojects") renderMyProjects();
   syncURL();
 }
 function setTheme(t){ document.documentElement.setAttribute("data-theme",t);
@@ -1388,7 +1509,13 @@ function init(){ try {
     const use=e.target.closest&&e.target.closest(".pl-use-proj"); if(use){ seedFromProject(PROGRAMS[+use.getAttribute("data-i")]); return; }
     const info=e.target.closest&&e.target.closest(".pcomp-info[data-i]"); if(info) openCard(PROGRAMS[+info.getAttribute("data-i")]); });
 
-  setTheme("light"); renderMeta(); buildFX(); renderUniverse(); renderDQ(); renderHome(); renderSectors(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
+  on("mp-add","click",()=>{ MP_EDIT={}; showView("myprojects"); renderMyProjects(); });
+  on("mp-export","click",mpExportJSON);
+  on("mp-export-csv","click",mpExportCSV);
+  on("mp-import","click",()=>{ const f=document.getElementById("mp-file"); if(f)f.click(); });
+  on("mp-file","change",e=>{ if(e.target.files&&e.target.files[0]) mpImport(e.target.files[0]); e.target.value=""; });
+
+  setTheme("light"); renderMeta(); buildFX(); renderUniverse(); renderDQ(); loadMP(); renderMyProjects(); renderHome(); renderSectors(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
   route(); URL_READY=true; syncURL();
   } catch(err){
     if(typeof console!=="undefined"&&console.error) console.error("Benchmark DB init failed:",err);
