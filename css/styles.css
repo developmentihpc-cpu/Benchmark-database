@@ -262,6 +262,80 @@ summary.bt-cap:hover span{color:var(--accent-ink)}
 .bm-cta h3{margin:0 0 3px;font-family:var(--serif);font-weight:600;font-size:15px;color:var(--accent-ink)}
 .bm-cta p{margin:0;font-size:12.5px;color:var(--text2);max-width:62ch;line-height:1.5}
 .bm-cta .btn{flex:none}
+/* ================= Benchmarks tab — ODA brand (Lora+Montserrat, ink/gold/slate,
+   sharp corners, no gradients/shadows, gold rule) ================= */
+#view-benchmarks{
+  --o-ink:#1D252C;--o-body:#1A2B3D;--o-char:#4A4F54;--o-gold:#AD833B;--o-cream:#F1E7D6;
+  --o-blue:#678CA5;--o-bluedeep:#2F586E;--o-mistblue:#AEC8D8;--o-mistsoft:#E5EDF2;
+  --o-wash:#F4F5F7;--o-line:#E2E2E2;--o-white:#fff;
+  --o-serif:'Lora',Georgia,serif;--o-sans:'Montserrat','Segoe UI',system-ui,sans-serif;
+  --o-high:#2F7D5C;--o-med:#C28A2C;--o-low:#B14545;
+  background:var(--o-wash);margin:0 -30px;padding:0 30px 40px;color:var(--o-body);
+}
+#view-benchmarks .topbar{border-bottom:1px solid var(--o-line)}
+#view-benchmarks .tb-title h1{font-family:var(--o-serif);font-weight:600;color:var(--o-ink);position:relative;padding-bottom:12px}
+#view-benchmarks .tb-title h1::after{content:"";position:absolute;left:0;bottom:0;width:56px;height:2px;background:var(--o-gold)}
+#view-benchmarks .tb-title p{font-family:var(--o-sans);color:var(--o-char);font-weight:400}
+#view-benchmarks .tb-title p b{color:var(--o-ink);font-weight:600}
+#view-benchmarks .bench,#view-benchmarks .bm-desc,#view-benchmarks .bnote,#view-benchmarks .bt-how,#view-benchmarks .bm-foot,#view-benchmarks .bt-scale{font-family:var(--o-sans)}
+/* banner */
+#view-benchmarks .bt-banner{background:var(--o-white);border:1px solid var(--o-line);border-radius:0;box-shadow:none;padding:22px 24px}
+#view-benchmarks .bt-banner h2{font-family:var(--o-serif);font-weight:600;color:var(--o-ink);font-size:18px;position:relative;padding-bottom:10px;margin-bottom:12px}
+#view-benchmarks .bt-banner h2::after{content:"";position:absolute;left:0;bottom:0;width:56px;height:2px;background:var(--o-gold)}
+#view-benchmarks .bt-banner>p{color:var(--o-body)}#view-benchmarks .bt-banner>p b,#view-benchmarks .bt-how b{color:var(--o-ink)}
+#view-benchmarks .bt-how{color:var(--o-char)}
+#view-benchmarks .bt-denom{color:var(--o-char)}
+/* eyebrow tab selector */
+#view-benchmarks .bm-tabs{gap:0;border-bottom:1px solid var(--o-line);margin-bottom:16px;flex-wrap:wrap}
+#view-benchmarks .bm-tab{font-family:var(--o-sans);font-weight:600;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--o-char);background:none;border:0;border-bottom:2px solid transparent;border-radius:0;padding:10px 14px;margin-bottom:-1px}
+#view-benchmarks .bm-tab:hover{color:var(--o-ink);border-bottom-color:var(--o-line)}
+#view-benchmarks .bm-tab.on{color:var(--o-ink);border-bottom-color:var(--o-gold);background:none}
+#view-benchmarks .bm-desc{color:var(--o-char);max-width:80ch}
+/* cards */
+#view-benchmarks .bm-card{background:var(--o-white);border:1px solid var(--o-line);border-radius:0;box-shadow:none}
+#view-benchmarks .bm-lab{font-family:var(--o-sans);font-weight:600;color:var(--o-ink)}
+#view-benchmarks .bm-n{font-family:var(--o-sans);color:var(--o-char)}
+#view-benchmarks .bm-v{font-family:var(--o-serif);font-weight:600;color:var(--o-ink);font-size:28px;letter-spacing:0}
+#view-benchmarks .bm-sub{color:var(--o-char)}
+#view-benchmarks .bm-bar{background:var(--o-mistsoft);border-radius:0}
+#view-benchmarks .bm-band{background:var(--o-mistblue);border-radius:0}
+#view-benchmarks .bm-med{background:var(--o-gold);width:3px;border-radius:0}
+#view-benchmarks .bm-foot{color:var(--o-char);border-top:1px solid var(--o-line)}
+#view-benchmarks .bm-den{color:var(--o-char)}
+#view-benchmarks .bt-thin{color:var(--o-med)}
+/* scale legend */
+#view-benchmarks .bt-scale{color:var(--o-char)}
+#view-benchmarks .bt-band-key{background:var(--o-mistblue);border-radius:0}
+#view-benchmarks .bt-med-key{background:var(--o-gold);border-radius:0}
+/* show-more + custom peer sets */
+#view-benchmarks .bm-more{background:var(--o-white);border:1px solid var(--o-line);border-radius:0;color:var(--o-ink);font-family:var(--o-sans)}
+#view-benchmarks .bm-more:hover{border-color:var(--o-gold);background:var(--o-white)}
+#view-benchmarks .bm-chead{font-family:var(--o-serif);color:var(--o-ink)}
+#view-benchmarks .bm-cnote{color:var(--o-char);font-family:var(--o-sans)}
+#view-benchmarks .bm-add{border:1.5px dashed var(--o-line);background:var(--o-white);border-radius:0}
+#view-benchmarks .bm-add:hover{border-color:var(--o-gold);background:var(--o-white)}
+#view-benchmarks .bm-add-plus{color:var(--o-gold)}
+#view-benchmarks .bm-add-t{color:var(--o-ink);font-family:var(--o-sans)}
+#view-benchmarks .bm-add-s{color:var(--o-char);font-family:var(--o-sans)}
+#view-benchmarks .bm-crm{border-radius:0;border-color:var(--o-line);color:var(--o-char);background:var(--o-white)}
+#view-benchmarks .bm-crm:hover{border-color:var(--o-low);color:var(--o-low)}
+#view-benchmarks .bm-fl{font-family:var(--o-sans);color:var(--o-char)}
+#view-benchmarks .bm-fl select{border-radius:0;border:1px solid var(--o-line);font-family:var(--o-sans);color:var(--o-ink);background:var(--o-white)}
+/* buttons — sharp deep-blue */
+#view-benchmarks .btn{background:var(--o-bluedeep);border:1px solid var(--o-bluedeep);border-radius:0;color:#fff;font-family:var(--o-sans);font-weight:600}
+#view-benchmarks .btn:hover{filter:brightness(1.08)}
+#view-benchmarks .btn.ghost{background:var(--o-white);color:var(--o-char);border-color:var(--o-line)}
+#view-benchmarks .btn.ghost:hover{color:var(--o-ink);border-color:var(--o-char);filter:none}
+/* planner CTA — ODA bottom-line band */
+#view-benchmarks .bm-cta{background:var(--o-wash);border:1px solid var(--o-line);border-left:3px solid var(--o-gold);border-radius:0;box-shadow:none}
+#view-benchmarks .bm-cta h3{font-family:var(--o-serif);color:var(--o-ink)}
+#view-benchmarks .bm-cta p{color:var(--o-char);font-family:var(--o-sans)}
+#view-benchmarks .bm-cta p b{color:var(--o-ink)}
+/* note */
+#view-benchmarks .bnote{background:var(--o-mistsoft);border:0;border-left:2px solid var(--o-gold);border-radius:0;color:var(--o-char)}
+#view-benchmarks .bnote b{color:var(--o-ink)}
+#view-benchmarks .muted{color:var(--o-char)}
+
 /* ---------- Home (landing overview) ---------- */
 .home{display:flex;flex-direction:column;gap:20px}
 .home-hero{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 20%,var(--panel)),var(--panel) 65%);border:1px solid var(--line);border-radius:18px;padding:30px 32px;box-shadow:var(--shadow)}
