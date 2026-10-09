@@ -992,6 +992,58 @@ const MP_STATUS=["Planning","Active","On hold","Completed","Cancelled"];
 const CC_BY_NAME=(function(){ const m={}; PROGRAMS.forEach(p=>{ if(p.co&&p.cc&&!m[p.co]) m[p.co]=p.cc; }); return m; })();
 let MP=[];           // the user's projects
 let MP_EDIT=null;    // null = list only; {} = add form; a project = edit form
+let MP_MODE="local"; // "local" | "shared" | "shared-locked"
+let MP_HANDLE=null;  // FileSystemFileHandle of the connected shared file
+
+/* ---- shared-folder storage via the File System Access API (Chrome/Edge) ----
+   Members point the app at one JSON file on a shared drive; all add/edit/delete
+   writes merge into that file so everyone sees the same projects. The handle is
+   kept in IndexedDB so it reconnects across sessions (re-granted on a click). */
+function mpFsOk(){ return typeof window!=="undefined" && typeof window.showOpenFilePicker==="function" && typeof window.showSaveFilePicker==="function"; }
+function mpIDB(){ return new Promise((res,rej)=>{ const r=indexedDB.open("bdb-fs",1); r.onupgradeneeded=()=>r.result.createObjectStore("h"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function mpIdbSet(k,v){ const db=await mpIDB(); return new Promise((res,rej)=>{ const t=db.transaction("h","readwrite"); t.objectStore("h").put(v,k); t.oncomplete=res; t.onerror=()=>rej(t.error); }); }
+async function mpIdbGet(k){ const db=await mpIDB(); return new Promise((res,rej)=>{ const t=db.transaction("h","readonly"); const q=t.objectStore("h").get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+async function mpIdbDel(k){ const db=await mpIDB(); return new Promise((res)=>{ const t=db.transaction("h","readwrite"); t.objectStore("h").delete(k); t.oncomplete=res; }); }
+async function mpPerm(h,write){ const o={mode:write?"readwrite":"read"}; if((await h.queryPermission(o))==="granted") return true; return (await h.requestPermission(o))==="granted"; }
+async function mpReadHandle(){ const f=await MP_HANDLE.getFile(); const t=await f.text(); try{ const d=JSON.parse(t||"[]"); return Array.isArray(d)?d.filter(x=>x&&x.id):[]; }catch(e){ return []; } }
+async function mpWriteHandle(arr){ const w=await MP_HANDLE.createWritable(); await w.write(JSON.stringify(arr,null,2)); await w.close(); }
+/* union by id; for a shared id, the record with the later "updated" wins */
+function mpMerge(a,b){ const m={}; (a||[]).concat(b||[]).forEach(p=>{ if(!p||!p.id) return; const e=m[p.id]; if(!e||( (p.updated||"") >= (e.updated||"") )) m[p.id]=p; }); return Object.keys(m).map(k=>m[k]); }
+async function mpConnectShared(create){
+  if(!mpFsOk()){ alert("Shared-file saving needs Chrome or Edge. In other browsers, use Export/Import to the shared folder instead."); return; }
+  try{
+    let handle;
+    const types=[{description:"Benchmark DB projects",accept:{"application/json":[".json"]}}];
+    if(create) handle=await window.showSaveFilePicker({suggestedName:"benchmark_projects.json",types:types});
+    else [handle]=await window.showOpenFilePicker({types:types,multiple:false});
+    MP_HANDLE=handle;
+    if(!(await mpPerm(handle,true))){ MP_HANDLE=null; return; }
+    let fileData=[]; try{ fileData=await mpReadHandle(); }catch(e){}
+    MP=mpMerge(fileData,MP);          // on first connect, fold any browser-local projects in
+    await mpWriteHandle(MP);
+    try{ await mpIdbSet("projects",handle); }catch(e){}
+    MP_MODE="shared"; saveMP(); renderMyProjects();
+  }catch(e){ if(e&&e.name!=="AbortError") alert("Couldn't connect the shared file: "+(e.message||e.name)); }
+}
+async function mpRefreshShared(){ if(!MP_HANDLE) return; try{ if(!(await mpPerm(MP_HANDLE,false))) return; MP=mpMerge(await mpReadHandle(),MP); saveMP(); renderMyProjects(); }catch(e){ alert("Couldn't read the shared file."); } }
+async function mpReconnectShared(){ if(!MP_HANDLE) return; try{ if(await mpPerm(MP_HANDLE,true)){ MP_MODE="shared"; MP=mpMerge(await mpReadHandle(),MP); saveMP(); renderMyProjects(); } }catch(e){} }
+async function mpDisconnectShared(){ MP_HANDLE=null; MP_MODE="local"; try{ await mpIdbDel("projects"); }catch(e){} renderMyProjects(); }
+async function mpRestoreShared(){ if(!mpFsOk()) return; try{ const h=await mpIdbGet("projects"); if(!h) return; MP_HANDLE=h;
+  if((await h.queryPermission({mode:"readwrite"}))==="granted"){ MP_MODE="shared"; try{ MP=mpMerge(await mpReadHandle(),MP); saveMP(); }catch(e){} }
+  else MP_MODE="shared-locked"; renderMyProjects(); }catch(e){} }
+/* every mutation: cache to localStorage + (if connected) merge-write to the shared file */
+function mpPersist(){ saveMP(); renderMyProjects(); if(MP_MODE==="shared"&&MP_HANDLE) mpWriteSharedMerged(); }
+async function mpWriteSharedMerged(){ try{ if(!(await mpPerm(MP_HANDLE,true))){ MP_MODE="shared-locked"; renderMyProjects(); return; }
+  const merged=mpMerge(await mpReadHandle(),MP); MP=merged; await mpWriteHandle(MP); saveMP(); renderMyProjects(); }catch(e){} }
+function mpStorageBar(){
+  if(!mpFsOk())
+    return "<div class='mp-store mp-store-warn'><div class='mp-store-tx'><b>Saved in this browser only</b><span>Shared-folder saving needs Chrome or Edge. In this browser, use <b>Export</b> / <b>Import</b> to the shared folder.</span></div></div>";
+  if(MP_MODE==="shared")
+    return "<div class='mp-store mp-store-on'><span class='mp-store-dot'></span><div class='mp-store-tx'><b>Shared file connected</b><span>Projects save to the shared JSON file — everyone with access sees them. Pull teammates’ changes with Refresh.</span></div><div class='mp-store-a'><button class='btn ghost' id='mp-refresh'>Refresh</button><button class='btn ghost' id='mp-disconnect'>Disconnect</button></div></div>";
+  if(MP_MODE==="shared-locked")
+    return "<div class='mp-store mp-store-locked'><div class='mp-store-tx'><b>Shared file — reconnect to continue</b><span>Click to re-grant access to the shared project file for this session.</span></div><div class='mp-store-a'><button class='btn' id='mp-reconnect'>Reconnect shared file</button></div></div>";
+  return "<div class='mp-store'><div class='mp-store-tx'><b>Saved in this browser</b><span>Projects are private to this browser. Connect a shared file so your whole team sees and edits the same set.</span></div><div class='mp-store-a'><button class='btn' id='mp-connect'>Connect shared file…</button><button class='btn ghost' id='mp-create'>Create new…</button></div></div>";
+}
 function loadMP(){ try{ MP=JSON.parse(localStorage.getItem("bdb_myprojects")||"[]")||[]; }catch(e){ MP=[]; } if(!Array.isArray(MP)) MP=[]; }
 function saveMP(){ try{ localStorage.setItem("bdb_myprojects",JSON.stringify(MP)); }catch(e){} }
 function mpUID(){ return "p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
@@ -1011,7 +1063,7 @@ function mpBench(p){ if(!p.sn) return null;
 }
 function renderMyProjects(){
   const el=document.getElementById("myprojects"); if(!el) return;
-  let h="";
+  let h=mpStorageBar();
   if(MP_EDIT) h+=mpForm(MP_EDIT);
   if(MP.length){
     const tot=MP.reduce((s,p)=>s+(+p.budget||0),0);
@@ -1088,12 +1140,16 @@ function mpWire(el){
     const d=mpReadForm(); if(!d.name){ const n=document.getElementById("mpf-name"); if(n){n.focus();n.classList.add("mp-err");} return; }
     if(MP_EDIT&&MP_EDIT.id){ const i=MP.findIndex(x=>x.id===MP_EDIT.id); if(i>=0) MP[i]=Object.assign({},MP[i],d,{updated:mpToday()}); }
     else MP.unshift(Object.assign({id:mpUID(),updated:mpToday()},d));
-    MP_EDIT=null; saveMP(); renderMyProjects();
+    MP_EDIT=null; mpPersist();
   });
   const cancel=el.querySelector("#mpf-cancel"); if(cancel) cancel.addEventListener("click",()=>{ MP_EDIT=null; renderMyProjects(); });
   el.querySelectorAll(".mp-edit").forEach(b=>b.addEventListener("click",()=>{ const p=MP.find(x=>x.id===b.getAttribute("data-id")); if(p){ MP_EDIT=p; renderMyProjects(); window.scrollTo(0,0); } }));
   el.querySelectorAll(".mp-del").forEach(b=>b.addEventListener("click",()=>{ const id=b.getAttribute("data-id"),p=MP.find(x=>x.id===id);
-    if(p&&confirm("Delete “"+(p.name||"this project")+"”? This can’t be undone.")){ MP=MP.filter(x=>x.id!==id); saveMP(); renderMyProjects(); } }));
+    if(p&&confirm("Delete “"+(p.name||"this project")+"”? This can’t be undone.")){ MP=MP.filter(x=>x.id!==id); mpPersist(); } }));
+  // shared-file storage controls
+  const st=(id,fn)=>{ const b=el.querySelector("#"+id); if(b) b.addEventListener("click",fn); };
+  st("mp-connect",()=>mpConnectShared(false)); st("mp-create",()=>mpConnectShared(true));
+  st("mp-refresh",mpRefreshShared); st("mp-disconnect",mpDisconnectShared); st("mp-reconnect",mpReconnectShared);
 }
 function mpExportJSON(){ dl("my_projects.json",JSON.stringify(MP,null,2)); }
 function mpExportCSV(){
@@ -1104,7 +1160,7 @@ function mpExportCSV(){
 }
 function mpImport(file){ const r=new FileReader(); r.onload=()=>{ try{ const data=JSON.parse(r.result); if(!Array.isArray(data)) throw 0;
   const clean=data.filter(x=>x&&typeof x==="object").map(x=>Object.assign({},x,{id:(x.id||mpUID())}));
-  MP=clean.concat(MP.filter(m=>!clean.some(c=>c.id===m.id))); saveMP(); MP_EDIT=null; showView("myprojects"); renderMyProjects();
+  MP=clean.concat(MP.filter(m=>!clean.some(c=>c.id===m.id))); MP_EDIT=null; showView("myprojects"); mpPersist();
   }catch(e){ alert("Couldn’t read that file — expected a my_projects.json export."); } }; r.readAsText(file); }
 
 function showView(name){
@@ -1183,6 +1239,7 @@ function route(){
   renderPrograms(); renderOutcomes(); renderCountry();
   let dest=(view&&document.getElementById("view-"+view))?view:"home";
   if(!view){ const pf=["q","donor","region","country","sector","status","results","provider"].some(k=>qp.has(k)); if(pf) dest="programmes"; }
+  if(!view && document.documentElement.hasAttribute("data-shared")) dest="myprojects";  // shared-folder build lands on projects
   showView(dest);
 }
 
@@ -1515,7 +1572,7 @@ function init(){ try {
   on("mp-import","click",()=>{ const f=document.getElementById("mp-file"); if(f)f.click(); });
   on("mp-file","change",e=>{ if(e.target.files&&e.target.files[0]) mpImport(e.target.files[0]); e.target.value=""; });
 
-  setTheme("light"); renderMeta(); buildFX(); renderUniverse(); renderDQ(); loadMP(); renderMyProjects(); renderHome(); renderSectors(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
+  setTheme("light"); renderMeta(); buildFX(); renderUniverse(); renderDQ(); loadMP(); renderMyProjects(); mpRestoreShared(); renderHome(); renderSectors(); renderBenchmarks(); renderCharts(); renderCountry(); renderPrograms(); renderOutcomes(); wirePlan();
   route(); URL_READY=true; syncURL();
   } catch(err){
     if(typeof console!=="undefined"&&console.error) console.error("Benchmark DB init failed:",err);
